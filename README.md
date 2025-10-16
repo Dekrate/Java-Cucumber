@@ -1,308 +1,456 @@
-# Gilded Rose - Refactoring and Extension Project
+# Supermarket Checkout System - Open/Closed Principle Implementation
 
-## Project Overview
+## Overview
 
-This project represents a comprehensive refactoring and extension of the Gilded Rose inventory management system. The Gilded Rose is a small inn run by Allison that buys and sells goods. The system automatically updates inventory quality as items approach their sell-by date.
+This project demonstrates a refactored supermarket checkout system that adheres to the **Open/Closed Principle** (OCP). The system is designed to be open for extension but closed for modification, allowing new features to be added without changing existing code.
 
-## Original Requirements
+## Open/Closed Principle Implementation
 
-The original Gilded Rose system had the following rules:
+### Problem Statement
 
-- All items have a `sellIn` value (days until sell-by date) and a `quality` value
-- At the end of each day, both values decrease for every item
-- Once the sell-by date passes, quality degrades twice as fast
-- Quality is never negative and never exceeds 50
-- **Aged Brie** increases in quality as it ages
-- **Sulfuras** is a legendary item that never decreases in quality or needs to be sold
-- **Backstage passes** increase in quality as the concert approaches, but drop to 0 after the event
-- **Conjured items** degrade twice as fast as normal items
+The original system contained a large `if-else` chain in the `ShoppingCart.handleOffers()` method that violated the Open/Closed Principle. Adding new offer types required modifying existing code, making the system fragile and difficult to maintain.
 
-## Project Objectives
+### Solution Architecture
 
-The instructor required the following:
+The refactored system implements OCP through several design patterns:
 
-1. Make the system open to possible extensions
-2. Add new categories of items with their own rules
-3. Implement discounted bundles of items
-4. Implement loyalty programmes
-5. Ensure comprehensive test coverage
+## 1. Product Categories System
 
-All features must comply with the **Open/Closed Principle** (OCP).
+### Design
 
-## Solution Architecture
+The product category system uses the **Strategy Pattern** to enable different product types with their own business rules.
 
-### 1. Item Update System - Strategy Pattern
+#### Interface: `ProductCategory`
 
-The core system uses the **Strategy Pattern** to handle different item types.
+Defines the contract for product categories, allowing new categories to be added without modifying existing code.
 
-**Package:** `dojo.supermarket.model.strategy/`
-
-**Components:**
-- `ItemUpdateStrategy` (interface) - defines contract for item updates
-- `NormalItemStrategy` - handles standard items
-- `AgedBrieStrategy` - handles Aged Brie (increases in quality)
-- `SulfurasStrategy` - handles legendary items (never changes)
-- `BackstagePassStrategy` - handles backstage passes (complex quality rules)
-- `ConjuredItemStrategy` - handles conjured items (degrades 2x faster)
-
-**OCP Compliance:**
-- **Open for extension:** Add new item categories by creating new strategy classes
-- **Closed for modification:** No need to modify `GildedRose` or existing strategies
-
-**Adding a new item category:**
 ```java
-public class PerishableItemStrategy implements ItemUpdateStrategy {
+public interface ProductCategory {
+    String getCategoryName();
+    double applyPriceAdjustment(double basePrice, double quantity);
+    boolean hasBundleRules();
+}
+```
+
+#### Implementations
+
+- **StandardCategory**: Default category with no special rules
+- **ConjuredCategory**: Items that degrade twice as fast as normal items
+- **PremiumCategory**: High-quality items with potential special handling
+
+### Extensibility
+
+New product categories can be added by implementing the `ProductCategory` interface:
+
+```java
+public class OrganicCategory implements ProductCategory {
     @Override
-    public boolean canHandle(Item item) {
-        return item.name.startsWith("Perishable");
-    }
+    public String getCategoryName() { return "Organic"; }
     
     @Override
-    public void update(Item item) {
-        // Custom logic for perishable items
+    public double applyPriceAdjustment(double basePrice, double quantity) {
+        return basePrice * quantity * 1.15; // 15% premium
     }
 }
 ```
 
-Then register in `GildedRose.initializeStrategies()`:
+### How It Satisfies OCP
+
+- **Open for extension**: New categories can be added by creating new implementations
+- **Closed for modification**: Existing category classes and the Product class remain unchanged
+- Products can be assigned different categories at runtime using `product.setCategory()`
+
+## 2. Special Offers System
+
+### Design
+
+The special offers system uses the **Strategy Pattern** combined with a **Factory Pattern** to eliminate the `if-else` chain.
+
+#### Interface: `OfferStrategy`
+
+Each offer type implements this interface with its own discount calculation logic.
+
 ```java
-strategies.add(new PerishableItemStrategy());
+public interface OfferStrategy {
+    Discount calculateDiscount(Product product, double quantity, 
+                              double unitPrice, double argument);
+    String getDescription();
+}
 ```
 
-### 2. Discounted Bundles - Strategy Pattern
+#### Implementations
 
-**Package:** `dojo.supermarket.model.gildedrose.discount/`
+- **ThreeForTwoStrategy**: Buy 3, pay for 2
+- **TwoForAmountStrategy**: Buy 2 for a fixed amount
+- **FiveForAmountStrategy**: Buy 5 for a fixed amount
+- **PercentageDiscountStrategy**: Apply percentage discount
 
-**Components:**
-- `DiscountStrategy` (interface) - defines contract for discount calculations
-- `DiscountBundle` - implements bundle discounts
-- `BundleManager` - manages all discount strategies
+#### Factory: `OfferStrategyFactory`
 
-**OCP Compliance:**
-- Can add custom discount strategies without modifying `BundleManager`
-- `BundleManager.addDiscountStrategy()` accepts any `DiscountStrategy` implementation
+Maps offer types to their corresponding strategies:
 
-**Example - Adding custom discount:**
 ```java
-DiscountStrategy seasonalDiscount = new DiscountStrategy() {
-    @Override
-    public double calculateDiscount(double basePrice) {
-        return basePrice * 0.30; // 30% seasonal discount
+public class OfferStrategyFactory {
+    private static final Map<SpecialOfferType, OfferStrategy> strategies;
+    
+    public static void registerStrategy(SpecialOfferType type, OfferStrategy strategy) {
+        strategies.put(type, strategy);
     }
     
-    @Override
-    public String getDescription() {
-        return "Seasonal Sale: 30% off";
+    public static OfferStrategy getStrategy(SpecialOfferType type) {
+        return strategies.get(type);
     }
-};
-
-BundleManager manager = new BundleManager();
-manager.addDiscountStrategy(seasonalDiscount);
+}
 ```
 
-**Standard bundle usage:**
-```java
-DiscountBundle bundle = new DiscountBundle("Hero Pack", 20.0);
-bundle.addItem(new Item("Sword", 10, 50));
-bundle.addItem(new Item("Shield", 15, 40));
+### Refactored Code
 
-manager.addBundle(bundle);
-double discount = manager.calculateBestDiscount(100.0); // Returns 20.0
+**Before (violates OCP):**
+```java
+if (offer.offerType == SpecialOfferType.THREE_FOR_TWO) {
+    // calculation logic
+} else if (offer.offerType == SpecialOfferType.TWO_FOR_AMOUNT) {
+    // calculation logic
+} else if (offer.offerType == SpecialOfferType.FIVE_FOR_AMOUNT) {
+    // calculation logic
+}
+// ... more conditions
 ```
 
-### 3. Loyalty Programmes - Strategy Pattern
-
-**Package:** `dojo.supermarket.model.loyalty/`
-
-**Components:**
-- `LoyaltyStrategy` (interface) - defines contract for loyalty calculations
-- `LoyaltyProgram` - standard tier-based loyalty program
-- `LoyaltyTier` (enum) - Bronze, Silver, Gold tiers
-- `LoyaltyProgramManager` - manages all loyalty strategies
-
-**Tier System:**
-
-| Tier   | Points Required | Discount |
-|--------|----------------|----------|
-| Bronze | 0              | 5%       |
-| Silver | 500            | 10%      |
-| Gold   | 1000           | 15%      |
-
-**OCP Compliance:**
-- Can add custom loyalty strategies without modifying `LoyaltyProgramManager`
-- `LoyaltyProgramManager.registerCustomerWithStrategy()` accepts any `LoyaltyStrategy`
-
-**Example - Adding VIP program:**
+**After (follows OCP):**
 ```java
-LoyaltyStrategy vipProgram = new LoyaltyStrategy() {
+OfferStrategy strategy = OfferStrategyFactory.getStrategy(offer.offerType);
+Discount discount = strategy.calculateDiscount(p, quantity, unitPrice, offer.argument);
+```
+
+### Extensibility
+
+New offer types can be added in three ways:
+
+1. **Create new strategy implementation:**
+```java
+public class BuyOneGetOneFreeStrategy implements OfferStrategy {
     @Override
-    public int calculatePoints(double purchaseAmount) {
-        return (int) (purchaseAmount * 2); // Double points
+    public Discount calculateDiscount(...) {
+        // Implementation
+    }
+}
+```
+
+2. **Register with factory:**
+```java
+OfferStrategyFactory.registerStrategy(
+    SpecialOfferType.BUY_ONE_GET_ONE_FREE, 
+    new BuyOneGetOneFreeStrategy()
+);
+```
+
+3. **No modification of existing offer strategies required**
+
+### How It Satisfies OCP
+
+- **Open for extension**: New offer strategies can be added by implementing `OfferStrategy`
+- **Closed for modification**: The `ShoppingCart.handleOffers()` method never needs to change
+- The factory allows runtime registration of new strategies
+
+## 3. Discounted Bundles System
+
+### Design
+
+The bundle system uses **data-driven design** where bundles are added as data rather than code.
+
+#### Class: `ProductBundle`
+
+Represents a collection of products sold together at a discount:
+
+```java
+public class ProductBundle {
+    private final String name;
+    private final List<Product> products;
+    private final double discountPercentage;
+    
+    public boolean isApplicable(List<Product> cartProducts) {
+        return cartProducts.containsAll(products);
+    }
+}
+```
+
+#### Manager: `BundleManager`
+
+Manages bundle registration and discount calculation:
+
+```java
+public class BundleManager {
+    private final List<ProductBundle> bundles;
+    
+    public void addBundle(ProductBundle bundle) {
+        bundles.add(bundle);
     }
     
-    @Override
-    public double calculateDiscount() {
-        return 25.0; // 25% discount
+    public List<Discount> calculateBundleDiscounts(...) {
+        // Calculates discounts for applicable bundles
+    }
+}
+```
+
+### Usage Example
+
+```java
+ProductBundle breakfastBundle = new ProductBundle(
+    "Breakfast Special",
+    Arrays.asList(bread, butter, jam),
+    15.0  // 15% discount
+);
+teller.getBundleManager().addBundle(breakfastBundle);
+```
+
+### Extensibility
+
+New bundles are added as data without code changes:
+
+```java
+// Add new bundle - no code modification needed
+ProductBundle lunchBundle = new ProductBundle(
+    "Lunch Combo",
+    Arrays.asList(sandwich, chips, drink),
+    20.0
+);
+bundleManager.addBundle(lunchBundle);
+```
+
+### How It Satisfies OCP
+
+- **Open for extension**: New bundles can be added at runtime
+- **Closed for modification**: Bundle calculation logic in `BundleManager` remains unchanged
+- Bundles are defined declaratively as data, not procedurally as code
+
+## 4. Loyalty Programmes System
+
+### Design
+
+The loyalty programme system uses the **Strategy Pattern** with a **Chain of Responsibility** approach.
+
+#### Interface: `LoyaltyProgram`
+
+Defines loyalty tier behavior:
+
+```java
+public interface LoyaltyProgram {
+    String getTierName();
+    double getDiscountPercentage();
+    double getPointsMultiplier();
+    boolean isApplicable(double totalAmount);
+}
+```
+
+#### Implementations
+
+- **BasicLoyaltyTier**: No discount, 1x points (default)
+- **SilverLoyaltyTier**: 5% discount, 1.5x points (purchases ≥ $20)
+- **GoldLoyaltyTier**: 10% discount, 2x points (purchases ≥ $50)
+
+#### Manager: `LoyaltyProgramManager`
+
+Determines applicable tier and calculates loyalty discounts:
+
+```java
+public class LoyaltyProgramManager {
+    private final List<LoyaltyProgram> programs;
+    
+    public LoyaltyProgram getApplicableTier(double totalAmount) {
+        for (LoyaltyProgram program : programs) {
+            if (program.isApplicable(totalAmount)) {
+                return program;
+            }
+        }
+        return new BasicLoyaltyTier();
     }
     
-    @Override
-    public String getDescription() {
-        return "VIP Program: 2x points, 25% discount";
+    public Discount calculateLoyaltyDiscount(...) {
+        // Calculates discount based on tier
     }
-};
-
-LoyaltyProgramManager manager = new LoyaltyProgramManager();
-manager.registerCustomerWithStrategy("VIP001", vipProgram);
+}
 ```
 
-**Standard loyalty usage:**
+### Extensibility
+
+New loyalty tiers can be added without modifying existing tiers:
+
 ```java
-LoyaltyProgramManager manager = new LoyaltyProgramManager();
-LoyaltyProgram program = manager.registerCustomer("CUST001");
+public class PlatinumLoyaltyTier implements LoyaltyProgram {
+    @Override
+    public String getTierName() { return "Platinum"; }
+    
+    @Override
+    public double getDiscountPercentage() { return 15.0; }
+    
+    @Override
+    public double getPointsMultiplier() { return 3.0; }
+    
+    @Override
+    public boolean isApplicable(double totalAmount) {
+        return totalAmount >= 100.0;
+    }
+}
 
-// Customer makes purchase
-manager.awardPointsForPurchase("CUST001", 600.0); // Customer now has Silver tier
-
-// Apply discount
-double finalPrice = manager.applyLoyaltyDiscount("CUST001", 100.0); // Returns 90.0
+// Register new tier
+loyaltyManager.addLoyaltyProgram(new PlatinumLoyaltyTier());
 ```
 
-## Open/Closed Principle Summary
+### How It Satisfies OCP
 
-All features comply with OCP:
+- **Open for extension**: New loyalty tiers can be added by implementing `LoyaltyProgram`
+- **Closed for modification**: `LoyaltyProgramManager` logic remains unchanged
+- Tier determination uses polymorphism instead of conditional logic
 
-| Feature | Interface | Manager | Extension Method |
-|---------|-----------|---------|------------------|
-| Item Categories | `ItemUpdateStrategy` | `GildedRose` | Create new strategy class |
-| Discounts | `DiscountStrategy` | `BundleManager` | `addDiscountStrategy()` |
-| Loyalty | `LoyaltyStrategy` | `LoyaltyProgramManager` | `registerCustomerWithStrategy()` |
+## System Integration
 
-**Key benefit:** Adding new functionality requires only creating new classes, not modifying existing ones.
+All components work together in the `Teller` class:
 
-## Testing Strategy
+```java
+public Receipt checksOutArticlesFrom(ShoppingCart cart) {
+    Receipt receipt = new Receipt();
+    
+    // 1. Add products with base prices
+    // 2. Apply special offers (Strategy Pattern)
+    cart.handleOffers(receipt, offers, catalog);
+    
+    // 3. Apply bundle discounts (Data-driven)
+    List<Discount> bundleDiscounts = bundleManager.calculateBundleDiscounts(...);
+    
+    // 4. Apply loyalty discounts (Strategy Pattern)
+    Discount loyaltyDiscount = loyaltyManager.calculateLoyaltyDiscount(...);
+    
+    return receipt;
+}
+```
 
-### Unit Tests (100% coverage)
+## Benefits of This Architecture
 
-**Item Strategy Tests:**
-- `ItemUpdateStrategyTest.java` - tests all strategy implementations
-- `StrategyHelperMethodsTest.java` - tests protected helper methods (including `increaseQuality()`)
-- `StrategyEdgeCasesTest.java` - boundary conditions and edge cases
+### 1. Extensibility
+- New product categories, offer types, bundles, and loyalty tiers can be added without modifying existing code
+- Extensions are made through new classes implementing existing interfaces
 
-**Discount Tests:**
-- `DiscountBundleTest.java` - bundle creation and calculations
-- `BundleManagerTest.java` - manager operations and OCP compliance
+### 2. Maintainability
+- Each discount type has its own class with single responsibility
+- No large `if-else` or `switch` statements
+- Changes to one offer type do not affect others
 
-**Loyalty Tests:**
-- `LoyaltyProgramTest.java` - tier system and point calculations
-- `LoyaltyProgramManagerTest.java` - manager operations and OCP compliance
+### 3. Testability
+- Each strategy can be tested independently
+- Easy to mock and inject dependencies
+- Comprehensive test coverage achieved (see test files)
 
-**Integration Tests:**
-- `GildedRoseRequirementsTest.java` - verifies original requirements
-- `GildedRoseTest.java` - overall system behavior
-- Cucumber BDD tests with step definitions
+### 4. Flexibility
+- Strategies can be registered at runtime
+- Bundles and loyalty tiers are data-driven
+- Product categories can be changed dynamically
 
-### Running Tests
+## Test Coverage
 
+The system includes comprehensive tests covering:
+
+- **Category Tests**: All product category implementations
+- **Offer Strategy Tests**: Each offer strategy with edge cases
+- **Bundle Tests**: Bundle creation, applicability, and discount calculation
+- **Loyalty Tests**: All loyalty tiers and manager functionality
+- **Integration Tests**: Complete checkout scenarios
+- **Edge Cases**: Empty carts, large quantities, fractional amounts
+
+Run tests with:
 ```bash
-# Run all tests
 mvn test
-
-# Run specific test suite
-mvn test -Dtest=BundleManagerTest
-mvn test -Dtest=LoyaltyProgramManagerTest
-mvn test -Dtest=StrategyHelperMethodsTest
 ```
 
-## Project Structure
+## Adding New Features (Examples)
 
-```
-src/main/java/
-├── dojo.supermarket.model.gildedrose/
-│   ├── Item.java                    # Core item class
-│   ├── GildedRose.java              # Main system class
-│   └── discount/
-│       ├── DiscountStrategy.java    # Discount interface (OCP)
-│       ├── DiscountBundle.java      # Bundle implementation
-│       └── BundleManager.java       # Discount manager (OCP)
-├── dojo.supermarket.model.strategy/
-│   ├── ItemUpdateStrategy.java      # Strategy interface (OCP)
-│   ├── NormalItemStrategy.java      # Normal items
-│   ├── AgedBrieStrategy.java        # Aged Brie
-│   ├── SulfurasStrategy.java        # Legendary items
-│   ├── BackstagePassStrategy.java   # Backstage passes
-│   └── ConjuredItemStrategy.java    # Conjured items (NEW)
-└── dojo.supermarket.model.loyalty/
-    ├── LoyaltyStrategy.java         # Loyalty interface (OCP)
-    ├── LoyaltyProgram.java          # Standard loyalty program
-    ├── LoyaltyTier.java             # Bronze/Silver/Gold tiers
-    └── LoyaltyProgramManager.java   # Loyalty manager (OCP)
+### Adding a New Product Category
 
-src/test/java/
-└── com.gildedrose/
-    ├── GildedRoseTest.java
-    ├── GildedRoseRequirementsTest.java
-    ├── discount/
-    │   ├── DiscountBundleTest.java
-    │   └── BundleManagerTest.java
-    ├── loyalty/
-    │   ├── LoyaltyProgramTest.java
-    │   └── LoyaltyProgramManagerTest.java
-    └── strategy/
-        ├── ItemUpdateStrategyTest.java
-        ├── StrategyHelperMethodsTest.java
-        └── StrategyEdgeCasesTest.java
+```java
+// 1. Create new category
+public class PerishableCategory implements ProductCategory {
+    @Override
+    public String getCategoryName() { return "Perishable"; }
+    
+    @Override
+    public double applyPriceAdjustment(double basePrice, double quantity) {
+        // Apply special logic for perishable items
+        return basePrice * quantity;
+    }
+}
+
+// 2. Use it
+Product milk = new Product("milk", ProductUnit.EACH, new PerishableCategory());
 ```
 
-## Requirements Verification
+### Adding a New Offer Type
 
-###  Make system open to extensions
-- **Strategy Pattern** implemented for all major features
-- No modification of existing code needed to add new functionality
+```java
+// 1. Add enum value
+public enum SpecialOfferType {
+    // existing types...
+    BUY_X_GET_Y_FREE
+}
 
-###  Add new categories of items
-- `ItemUpdateStrategy` interface allows infinite item types
-- `ConjuredItemStrategy` added as example
-- Each category has isolated, testable logic
+// 2. Create strategy
+public class BuyXGetYFreeStrategy implements OfferStrategy {
+    @Override
+    public Discount calculateDiscount(...) {
+        // Implementation
+    }
+}
 
-###  Discounted bundles
-- `DiscountStrategy` interface for extensibility
-- `BundleManager` supports multiple discount types
-- Fully tested with unit tests
+// 3. Register strategy
+OfferStrategyFactory.registerStrategy(
+    SpecialOfferType.BUY_X_GET_Y_FREE,
+    new BuyXGetYFreeStrategy()
+);
+```
 
-###  Loyalty programmes
-- `LoyaltyStrategy` interface for extensibility
-- Three-tier system with automatic upgrades
-- Supports custom loyalty programs
-- Fully tested with unit tests
+### Adding a New Bundle
 
-###  Full test coverage
-- All public methods covered
-- Edge cases tested
-- Protected methods tested (including `increaseQuality()`)
-- Integration tests verify system behavior
+```java
+// No code changes needed - just data
+ProductBundle dinnerBundle = new ProductBundle(
+    "Dinner Pack",
+    Arrays.asList(pasta, sauce, cheese),
+    25.0
+);
+teller.getBundleManager().addBundle(dinnerBundle);
+```
 
-## Key Achievements
+### Adding a New Loyalty Tier
 
-1. **Open/Closed Principle:** All new features support extension without modification
-2. **SOLID Compliance:** Single Responsibility, Interface Segregation, Dependency Inversion
-3. **Maintainability:** Clear separation of concerns, each class has one purpose
-4. **Testability:** 100% test coverage with isolated unit tests
-5. **Extensibility:** Easy to add new item types, discounts, and loyalty programs
+```java
+// 1. Create tier
+public class DiamondLoyaltyTier implements LoyaltyProgram {
+    @Override
+    public String getTierName() { return "Diamond"; }
+    
+    @Override
+    public double getDiscountPercentage() { return 20.0; }
+    
+    @Override
+    public double getPointsMultiplier() { return 4.0; }
+    
+    @Override
+    public boolean isApplicable(double totalAmount) {
+        return totalAmount >= 200.0;
+    }
+}
 
-## Documentation
+// 2. Register tier
+teller.getLoyaltyManager().addLoyaltyProgram(new DiamondLoyaltyTier());
+```
 
-- **README.md** (this file) - Project overview and usage
-- **REFACTORING_DOCUMENTATION.md** - Detailed refactoring decisions
-- **REQUIREMENTS_VERIFICATION.md** - Requirements compliance verification
+## Summary
 
-## Conclusion
+This refactored system demonstrates the Open/Closed Principle through:
 
-The Gilded Rose system has been successfully refactored to be fully compliant with the Open/Closed Principle. All instructor requirements have been met:
+1. **Strategy Pattern** for offers and loyalty programmes
+2. **Factory Pattern** for offer strategy creation
+3. **Data-driven design** for product bundles
+4. **Interface-based design** for product categories
 
-- System is open for extension through strategy interfaces
-- New item categories can be added without modifying existing code
-- Discount bundles implemented with extensible architecture
-- Loyalty programmes implemented with extensible architecture
-- Comprehensive test suite ensures quality and prevents regressions
+All new features can be added through extension rather than modification, making the system robust, maintainable, and easy to test.
 
-The system is now maintainable, extensible, and ready for future enhancements.

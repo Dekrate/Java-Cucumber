@@ -1,90 +1,57 @@
+
+
 package dojo.supermarket.model.loyalty;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import dojo.supermarket.model.Discount;
+import dojo.supermarket.model.Product;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Manages loyalty strategies for all customers.
- * Supports multiple loyalty program types through LoyaltyStrategy interface.
- * Complies with Open/Closed Principle - open for extension, closed for modification.
+ * Manages customer loyalty programs and applies loyalty discounts.
+ * Follows Open/Closed Principle - new loyalty tiers can be added without code changes.
  */
 public class LoyaltyProgramManager {
-    private Map<String, LoyaltyStrategy> customerStrategies;
+
+    private final List<LoyaltyProgram> programs = new ArrayList<>();
 
     public LoyaltyProgramManager() {
-        this.customerStrategies = new HashMap<>();
+        // Register default loyalty tiers
+        programs.add(new GoldLoyaltyTier());
+        programs.add(new SilverLoyaltyTier());
+        programs.add(new BasicLoyaltyTier());
+    }
+
+    public void addLoyaltyProgram(LoyaltyProgram program) {
+        programs.add(program);
     }
 
     /**
-     * Registers a customer with any loyalty strategy.
-     * Allows extension with new loyalty types without modifying this class.
+     * Determines the applicable loyalty tier based on purchase amount.
+     * Returns the highest tier that the customer qualifies for.
      */
-    public void registerCustomerWithStrategy(String customerId, LoyaltyStrategy strategy) {
-        customerStrategies.put(customerId, strategy);
-    }
-
-    /**
-     * Registers a customer with default LoyaltyProgram.
-     * Maintains backward compatibility.
-     */
-    public LoyaltyProgram registerCustomer(String customerId) {
-        if (!customerStrategies.containsKey(customerId)) {
-            LoyaltyProgram program = new LoyaltyProgram(customerId);
-            customerStrategies.put(customerId, program);
-            return program;
-        }
-        LoyaltyStrategy strategy = customerStrategies.get(customerId);
-        return (strategy instanceof LoyaltyProgram) ? (LoyaltyProgram) strategy : null;
-    }
-
-    public Optional<LoyaltyStrategy> getCustomerStrategy(String customerId) {
-        return Optional.ofNullable(customerStrategies.get(customerId));
-    }
-
-    /**
-     * Gets customer program for backward compatibility.
-     */
-    public Optional<LoyaltyProgram> getCustomerProgram(String customerId) {
-        LoyaltyStrategy strategy = customerStrategies.get(customerId);
-        if (strategy instanceof LoyaltyProgram) {
-            return Optional.of((LoyaltyProgram) strategy);
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Awards points to a customer based on purchase amount.
-     * Uses the strategy's point calculation method.
-     */
-    public void awardPointsForPurchase(String customerId, double purchaseAmount) {
-        getCustomerProgram(customerId).ifPresent(program -> {
-            int points = program.calculatePoints(purchaseAmount);
-            program.addPoints(points);
-        });
-    }
-
-    /**
-     * Calculates the final price after applying loyalty discount.
-     * Works with any LoyaltyStrategy implementation.
-     */
-    public double applyLoyaltyDiscount(String customerId, double originalPrice) {
-        return getCustomerStrategy(customerId)
-            .map(strategy -> originalPrice * (1 - strategy.calculateDiscount() / 100.0))
-            .orElse(originalPrice);
-    }
-
-    public Map<String, LoyaltyProgram> getAllCustomerPrograms() {
-        Map<String, LoyaltyProgram> programs = new HashMap<>();
-        customerStrategies.forEach((id, strategy) -> {
-            if (strategy instanceof LoyaltyProgram) {
-                programs.put(id, (LoyaltyProgram) strategy);
+    public LoyaltyProgram getApplicableTier(double totalAmount) {
+        for (LoyaltyProgram program : programs) {
+            if (program.isApplicable(totalAmount)) {
+                return program;
             }
-        });
-        return programs;
+        }
+        return new BasicLoyaltyTier();
     }
 
-    public Map<String, LoyaltyStrategy> getAllCustomerStrategies() {
-        return new HashMap<>(customerStrategies);
+    /**
+     * Calculates loyalty discount based on the customer's tier.
+     */
+    public Discount calculateLoyaltyDiscount(double subtotal, Product representativeProduct) {
+        LoyaltyProgram tier = getApplicableTier(subtotal);
+
+        if (tier.getDiscountPercentage() > 0) {
+            double discountAmount = subtotal * tier.getDiscountPercentage() / 100.0;
+            String description = tier.getTierName() + " Member - " + tier.getDiscountPercentage() + "% off";
+            return new Discount(representativeProduct, description, -discountAmount);
+        }
+
+        return null;
     }
 }

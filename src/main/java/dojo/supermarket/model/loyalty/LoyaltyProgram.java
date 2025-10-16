@@ -1,81 +1,32 @@
 package dojo.supermarket.model.loyalty;
 
 /**
- * Represents a customer's loyalty program membership.
- * Implements LoyaltyStrategy for extensibility and OCP compliance.
+ * Represents a customer loyalty program tier.
+ * Different tiers provide different discount rates.
+ *
+ * This design is open for extension - new loyalty tiers can be added
+ * without modifying existing code.
  */
-public class LoyaltyProgram implements LoyaltyStrategy {
-    private String customerId;
-    private int points;
-    private LoyaltyTier tier;
-
-    public LoyaltyProgram(String customerId) {
-        this.customerId = customerId;
-        this.points = 0;
-        this.tier = LoyaltyTier.BRONZE;
-    }
-
-    public void addPoints(int pointsToAdd) {
-        points += pointsToAdd;
-        updateTier();
-    }
-
-    public boolean redeemPoints(int pointsToRedeem) {
-        if (points >= pointsToRedeem) {
-            points -= pointsToRedeem;
-            updateTier();
-            return true;
-        }
-        return false;
-    }
-
-    private void updateTier() {
-        if (points >= 1000) {
-            tier = LoyaltyTier.GOLD;
-        } else if (points >= 500) {
-            tier = LoyaltyTier.SILVER;
-        } else {
-            tier = LoyaltyTier.BRONZE;
-        }
-    }
-
-    public String getCustomerId() {
-        return customerId;
-    }
-
-    public int getPoints() {
-        return points;
-    }
-
-    public LoyaltyTier getTier() {
-        return tier;
-    }
+public interface LoyaltyProgram {
 
     /**
-     * Calculates discount based on loyalty tier.
+     * Gets the name of this loyalty tier.
      */
-    public double getTierDiscount() {
-        return tier.getDiscountPercentage();
-    }
+    String getTierName();
 
-    @Override
-    public int calculatePoints(double purchaseAmount) {
-        return (int) Math.floor(purchaseAmount);
-    }
+    /**
+     * Gets the discount percentage for this tier.
+     */
+    double getDiscountPercentage();
 
-    @Override
-    public double calculateDiscount() {
-        return getTierDiscount();
-    }
+    /**
+     * Gets the points multiplier for purchases in this tier.
+     */
+    double getPointsMultiplier();
 
-    @Override
-    public String getDescription() {
-        return String.format("Customer: %s | Tier: %s | Points: %d | Discount: %.0f%%",
-            customerId, tier, points, getTierDiscount());
-    }
-
-    @Override
-    public String toString() {
-        return getDescription();
-    }
+    /**
+     * Checks if this tier is applicable for the given purchase amount.
+     */
+    boolean isApplicable(double totalAmount);
 }
+
