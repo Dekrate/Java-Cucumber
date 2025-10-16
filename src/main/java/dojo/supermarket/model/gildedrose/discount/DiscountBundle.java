@@ -1,13 +1,14 @@
-package com.gildedrose.discount;
+package dojo.supermarket.model.gildedrose.discount;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Represents a bundle of items sold together at a discounted price.
+ * Implements DiscountStrategy for extensibility.
  */
-public class DiscountBundle {
+public class DiscountBundle implements DiscountStrategy {
 	private String bundleName;
 	private List<Item> items;
 	private double discountPercentage;
@@ -49,9 +50,18 @@ public class DiscountBundle {
 	}
 
 	@Override
-	public String toString() {
+	public double calculateDiscount(double basePrice) {
+		return basePrice * discountPercentage / 100.0;
+	}
+
+	@Override
+	public String getDescription() {
 		return String.format("Bundle: %s (%.0f%% off) - %d items",
 				bundleName, discountPercentage, items.size());
 	}
-}
 
+	@Override
+	public String toString() {
+		return getDescription();
+	}
+}

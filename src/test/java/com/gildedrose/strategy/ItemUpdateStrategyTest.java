@@ -1,7 +1,9 @@
 package com.gildedrose.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
+import dojo.supermarket.model.strategy.*;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ItemUpdateStrategyTest {
@@ -249,4 +251,3 @@ class ItemUpdateStrategyTest {
         assertEquals(0, item.quality);
     }
 }
-

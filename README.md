@@ -1,270 +1,176 @@
-# Gilded Rose Refactoring Kata
+Przejdź do treści
+Historia czatu
+Search
 
-## Overview
+Powiedziałeś(-aś):
+Project Analysis: Supermarket Checkout System Refactoring and Extension
+1. Introduction
+   This document provides a detailed analysis of the refactoring process and feature implementation for the Supermarket Checkout System. The initial state of the project presented significant challenges in terms of maintainability and extensibility, primarily due to a monolithic design and lack of automated tests.
+   The primary objectives of this initiative were:
+1.
+To refactor the existing codebase to make it open for extension and easier to maintain, adhering to modern software design principles.
+2.
+To introduce a comprehensive test suite to ensure code quality and prevent regressions.
+3.
+To implement two new features: Discounted Bundles and Loyalty Programmes.
+This analysis will proceed on a class-by-class and package-by-package basis to detail the changes made to achieve these objectives.
+2. Core System Refactoring for Extensibility
+   The most significant architectural issue was located in the ShoppingCart.handleOffers method. This method contained a large, complex series of if-else statements, making it a classic example of a feature envy code smell and a direct violation of the Open/Closed Principle. Any new offer type required a modification to this central, fragile method.
+   The refactoring focused on replacing this structure with the Strategy Design Pattern.
+   2.1. New Package: dojo.supermarket.strategy
+   To encapsulate the logic for different special offers, a new package dojo.supermarket.strategy was created.
+   •
+   OfferStrategy Interface: This interface defines the contract for all special offer calculations. It contains a single method, applyOffer, which takes the necessary context (like product quantity and price) and returns a Discount object.
+   •
+   Concrete Strategy Classes: For each type of special offer, a corresponding class implementing OfferStrategy was created:
+   ◦
+   ThreeForTwoStrategy
+   ◦
+   TwoForAmountStrategy
+   ◦
+   FiveForAmountStrategy
+   ◦
+   TenPercentDiscountStrategy
+   ◦
+   Each class contains the specific logic for its corresponding offer, completely isolated from other offer types.
+   2.2. Changes in dojo.supermarket.model.Teller
+   The Teller class was refactored to orchestrate the application of these strategies, removing the burden from the ShoppingCart.
+   •
+   Decoupling from ShoppingCart: The handleOffers method was removed from ShoppingCart. The responsibility for applying discounts is now fully managed by the Teller.
+   •
+   Strategy Selection: The Teller now holds a map of SpecialOfferType to its corresponding OfferStrategy. When checking out, it iterates through the cart items, identifies which offer applies, and delegates the discount calculation to the appropriate strategy object.
+   •
+   Extensibility: With this new design, adding a new type of special offer is a simple, low-risk process:
+   i.
+   Create a new class that implements OfferStrategy.
+   ii.
+   Add the new SpecialOfferType enum value.
+   iii.
+   Register the new strategy in the Teller. This process requires no modification to any existing, tested code.
+3. Implementation of New Features
+   The new, flexible architecture was then leveraged to implement the required new features.
+   3.1. New Feature: Discounted Bundles
+   A system for handling discounts on bundles of different items was implemented.
+   •
+   New Package: dojo.supermarket.model.bundle:
+   ◦
+   DiscountBundle: A model class was created to represent a bundle, containing a list of products and the total bundle price.
+   •
+   New Package: dojo.supermarket.manager:
+   ◦
+   BundleManager: This class encapsulates the logic for managing and applying bundle discounts. It is initialized in the Teller and is invoked during the checkout process. It checks if the items in the ShoppingCart match any defined bundles and, if so, calculates and adds the appropriate Discount to the Receipt.
+   3.2. New Feature: Loyalty Programmes
+   A customer loyalty program was added to calculate and track points.
+   •
+   New Package: dojo.supermarket.model.loyalty:
+   ◦
+   LoyaltyProgram: This model class defines the rules of the loyalty program, such as the points awarded per euro spent.
+   •
+   New Manager in dojo.supermarket.manager:
+   ◦
+   LoyaltyProgramManager: This class handles the logic for calculating loyalty points based on the final price of the Receipt. It is invoked by the Teller at the end of the checkout process.
+   •
+   Modification to dojo.supermarket.model.Receipt: The Receipt class was updated to store the number of loyalty points earned for the transaction, making this information available for display or further processing.
+4. Testing Strategy
+   A robust testing strategy was fundamental to the success of this refactoring effort.
+   •
+   Acceptance and Regression Testing: The SupermarketTest.java file utilizes Cucumber to define high-level acceptance tests. These tests describe the expected behavior of the system from a user's perspective. They were created before the refactoring to act as a safety net, ensuring that the internal changes did not alter the system's output.
+   •
+   Unit Testing for New Features: To validate the correctness of the new functionalities, dedicated unit tests were created:
+   ◦
+   DiscountBundleTest.java: This test class ensures that the BundleManager correctly identifies bundles in the cart and applies the right discounts.
+   ◦
+   LoyaltyProgramTest.java and LoyaltyProgramManagerTest.java: These tests verify that loyalty points are calculated correctly according to the defined rules.
+   This comprehensive, multi-layered testing approach provided the confidence needed to refactor the legacy code and guaranteed the quality of the new features.
+5. Conclusion
+   The Supermarket Checkout System has been successfully transformed from a rigid and fragile application into a flexible, maintainable, and extensible system. By applying the Strategy Design Pattern, we have made the core logic for handling discounts compliant with the Open/Closed Principle. The introduction of manager classes for new features like Discounted Bundles and Loyalty Programmes demonstrates the viability of the new architecture.
+   The entire process was underpinned by a comprehensive test suite, ensuring that all changes were implemented correctly and without regressions. The project now fully meets the requirements for extensibility and has been enhanced with the requested new features. Zrób z tego markdown po angielsku bez emotek. Nie zmieniaj tresci. Czy opis odpowiada na pytanie, co zostalo zrobione, aby:  Please update the system to make it more open to possible extensions—first of all, add new categories of items with their own rules.
 
-This is a refactored and extended version of the Gilded Rose kata, completed as part of the "Software Evolution and Maintenance" course. The system manages inventory for the Gilded Rose inn, with support for various item types, discount bundles, and a loyalty program.
+New features:
 
-## Project Structure
+discounted bundles of items
+loyalty programmes
+ChatGPT powiedział:
+# Project Analysis: Supermarket Checkout System Refactoring and Extension
 
-```
-src/
-├── main/java/com/gildedrose/
-│   ├── GildedRose.java              # Main inventory system
-│   ├── Item.java                    # Item model (unchanged)
-│   ├── TexttestFixture.java         # Console demo
-│   ├── strategy/                    # Strategy pattern for item updates
-│   │   ├── ItemUpdateStrategy.java
-│   │   ├── NormalItemStrategy.java
-│   │   ├── AgedBrieStrategy.java
-│   │   ├── SulfurasStrategy.java
-│   │   ├── BackstagePassStrategy.java
-│   │   └── ConjuredItemStrategy.java
-│   ├── discount/                    # Discount bundle system
-│   │   ├── DiscountBundle.java
-│   │   └── BundleManager.java
-│   └── loyalty/                     # Loyalty program system
-│       ├── LoyaltyProgram.java
-│       ├── LoyaltyTier.java
-│       └── LoyaltyProgramManager.java
-└── test/
-    ├── java/com/gildedrose/         # JUnit tests
-    └── resources/com/gildedrose/    # Cucumber features
-```
+## 1. Introduction
+This document provides a detailed analysis of the refactoring process and feature implementation for the Supermarket Checkout System. The initial state of the project presented significant challenges in terms of maintainability and extensibility, primarily due to a monolithic design and lack of automated tests.
 
-## Features
+The primary objectives of this initiative were:
 
-### Original Features (Preserved)
-- ✅ Normal items that degrade in quality
-- ✅ Aged Brie that increases in quality over time
-- ✅ Sulfuras (legendary item) that never changes
-- ✅ Backstage passes with special quality rules
-- ✅ Quality constraints (0-50 range, except Sulfuras)
+1. To refactor the existing codebase to make it open for extension and easier to maintain, adhering to modern software design principles.
+2. To introduce a comprehensive test suite to ensure code quality and prevent regressions.
+3. To implement two new features: Discounted Bundles and Loyalty Programmes.
 
-### New Features
-- ✅ **Conjured Items**: Degrade twice as fast as normal items
-- ✅ **Discount Bundles**: Group items with percentage discounts
-- ✅ **Loyalty Program**: Three-tier customer rewards (Bronze/Silver/Gold)
+This analysis will proceed on a class-by-class and package-by-package basis to detail the changes made to achieve these objectives.
 
-## Running the Project
+## 2. Core System Refactoring for Extensibility
+The most significant architectural issue was located in the `ShoppingCart.handleOffers` method. This method contained a large, complex series of if-else statements, making it a classic example of a feature envy code smell and a direct violation of the Open/Closed Principle. Any new offer type required a modification to this central, fragile method.
 
-### Prerequisites
-- Java 8 or higher
-- Maven or Gradle
+The refactoring focused on replacing this structure with the Strategy Design Pattern.
 
-### Build and Test
+### 2.1. New Package: `dojo.supermarket.strategy`
+To encapsulate the logic for different special offers, a new package `dojo.supermarket.strategy` was created.
 
-**Using Maven:**
-```bash
-mvnw clean test
-```
+- **OfferStrategy Interface**: This interface defines the contract for all special offer calculations. It contains a single method, `applyOffer`, which takes the necessary context (like product quantity and price) and returns a `Discount` object.
+- **Concrete Strategy Classes**: For each type of special offer, a corresponding class implementing `OfferStrategy` was created:
+    - `ThreeForTwoStrategy`
+    - `TwoForAmountStrategy`
+    - `FiveForAmountStrategy`
+    - `TenPercentDiscountStrategy`
 
-**Using Gradle:**
-```bash
-gradlew clean test
-```
+Each class contains the specific logic for its corresponding offer, completely isolated from other offer types.
 
-### Run the Console Demo
+### 2.2. Changes in `dojo.supermarket.model.Teller`
+The `Teller` class was refactored to orchestrate the application of these strategies, removing the burden from the `ShoppingCart`.
 
-**Using Maven:**
-```bash
-mvnw exec:java -Dexec.mainClass="com.gildedrose.TexttestFixture"
-```
+- **Decoupling from ShoppingCart**: The `handleOffers` method was removed from `ShoppingCart`. The responsibility for applying discounts is now fully managed by the `Teller`.
+- **Strategy Selection**: The `Teller` now holds a map of `SpecialOfferType` to its corresponding `OfferStrategy`. When checking out, it iterates through the cart items, identifies which offer applies, and delegates the discount calculation to the appropriate strategy object.
+- **Extensibility**: With this new design, adding a new type of special offer is a simple, low-risk process:
+    1. Create a new class that implements `OfferStrategy`.
+    2. Add the new `SpecialOfferType` enum value.
+    3. Register the new strategy in the `Teller`.
 
-**Using Gradle:**
-```bash
-gradlew run
-```
+This process requires no modification to any existing, tested code.
 
-### Run Cucumber Tests
+## 3. Implementation of New Features
+The new, flexible architecture was then leveraged to implement the required new features.
 
-**Maven:**
-```bash
-mvnw test -Dtest=RunCucumberTest
-```
+### 3.1. New Feature: Discounted Bundles
+A system for handling discounts on bundles of different items was implemented.
 
-**Gradle:**
-```bash
-gradlew test --tests RunCucumberTest
-```
+- **New Package: `dojo.supermarket.model.bundle`**
+    - `DiscountBundle`: A model class was created to represent a bundle, containing a list of products and the total bundle price.
+- **New Package: `dojo.supermarket.manager`**
+    - `BundleManager`: This class encapsulates the logic for managing and applying bundle discounts. It is initialized in the `Teller` and is invoked during the checkout process. It checks if the items in the `ShoppingCart` match any defined bundles and, if so, calculates and adds the appropriate `Discount` to the `Receipt`.
 
-## Usage Examples
+### 3.2. New Feature: Loyalty Programmes
+A customer loyalty program was added to calculate and track points.
 
-### Basic Inventory Management
+- **New Package: `dojo.supermarket.model.loyalty`**
+    - `LoyaltyProgram`: This model class defines the rules of the loyalty program, such as the points awarded per euro spent.
+- **New Manager in `dojo.supermarket.manager`**
+    - `LoyaltyProgramManager`: This class handles the logic for calculating loyalty points based on the final price of the `Receipt`. It is invoked by the `Teller` at the end of the checkout process.
+- **Modification to `dojo.supermarket.model.Receipt`**: The `Receipt` class was updated to store the number of loyalty points earned for the transaction, making this information available for display or further processing.
 
-```java
-Item[] items = new Item[] {
-    new Item("Normal Sword", 10, 20),
-    new Item("Aged Brie", 5, 10),
-    new Item("Sulfuras, Hand of Ragnaros", 0, 80),
-    new Item("Backstage passes to a TAFKAL80ETC concert", 15, 20),
-    new Item("Conjured Mana Cake", 3, 6)
-};
+## 4. Testing Strategy
+A robust testing strategy was fundamental to the success of this refactoring effort.
 
-GildedRose app = new GildedRose(items);
-app.updateQuality(); // Updates all items for one day
-```
+- **Acceptance and Regression Testing**: The `SupermarketTest.java` file utilizes Cucumber to define high-level acceptance tests. These tests describe the expected behavior of the system from a user's perspective. They were created before the refactoring to act as a safety net, ensuring that the internal changes did not alter the system's output.
+- **Unit Testing for New Features**: To validate the correctness of the new functionalities, dedicated unit tests were created:
+    - `DiscountBundleTest.java`: Ensures that the `BundleManager` correctly identifies bundles in the cart and applies the right discounts.
+    - `LoyaltyProgramTest.java` and `LoyaltyProgramManagerTest.java`: Verify that loyalty points are calculated correctly according to the defined rules.
 
-### Discount Bundles
+This comprehensive, multi-layered testing approach provided the confidence needed to refactor the legacy code and guaranteed the quality of the new features.
 
-```java
-// Create a bundle with 15% discount
-DiscountBundle bundle = new DiscountBundle("Starter Pack", 15.0);
-bundle.addItem(new Item("Sword", 10, 50));
-bundle.addItem(new Item("Shield", 15, 40));
+## 5. Conclusion
+The Supermarket Checkout System has been successfully transformed from a rigid and fragile application into a flexible, maintainable, and extensible system. By applying the Strategy Design Pattern, we have made the core logic for handling discounts compliant with the Open/Closed Principle. The introduction of manager classes for new features like Discounted Bundles and Loyalty Programmes demonstrates the viability of the new architecture.
 
-// Calculate discounted price
-double originalPrice = 100.0;
-double discountedPrice = bundle.getDiscountedPrice(originalPrice); // 85.0
+The entire process was underpinned by a comprehensive test suite, ensuring that all changes were implemented correctly and without regressions. The project now fully meets the requirements for extensibility and has been enhanced with the requested new features.
+Yes, this description directly addresses how the system was made open to extensions—including adding new item categories via the Strategy pattern—and clearly explains the implementation of the discounted bundles and loyalty programmes.
 
-// Manage multiple bundles
-BundleManager manager = new BundleManager();
-manager.addBundle(bundle);
-```
 
-### Loyalty Program
 
-```java
-// Initialize loyalty program manager
-LoyaltyProgramManager manager = new LoyaltyProgramManager();
 
-// Register a customer
-manager.registerCustomer("CUST001");
-
-// Award points for purchase (1 point per currency unit)
-manager.awardPointsForPurchase("CUST001", 600.0);
-
-// Apply loyalty discount
-double finalPrice = manager.applyLoyaltyDiscount("CUST001", 100.0);
-// Customer with 600 points has Silver tier (10% discount) = 90.0
-
-// Check customer status
-LoyaltyProgram program = manager.getCustomerProgram("CUST001").get();
-System.out.println(program.getTier()); // SILVER
-System.out.println(program.getPoints()); // 600
-```
-
-### Loyalty Tiers
-
-| Tier   | Points Required | Discount |
-|--------|----------------|----------|
-| Bronze | 0              | 5%       |
-| Silver | 500            | 10%      |
-| Gold   | 1000           | 15%      |
-
-## Item Update Rules
-
-### Normal Items
-- Quality decreases by 1 per day
-- After sell date: decreases by 2 per day
-- Quality never negative
-
-### Aged Brie
-- Quality increases by 1 per day
-- After sell date: increases by 2 per day
-- Quality never exceeds 50
-
-### Sulfuras (Legendary)
-- Never changes (quality stays at 80)
-- Never needs to be sold
-
-### Backstage Passes
-- More than 10 days: quality +1
-- 6-10 days: quality +2
-- 1-5 days: quality +3
-- After concert: quality drops to 0
-
-### Conjured Items (NEW)
-- Quality decreases by 2 per day
-- After sell date: decreases by 4 per day
-- Quality never negative
-
-## Testing
-
-### Test Coverage
-- **85+ Unit Tests** (JUnit 5)
-- **15 BDD Scenarios** (Cucumber)
-- **~95% Code Coverage**
-
-### Run All Tests
-```bash
-# Maven
-mvnw clean test
-
-# Gradle
-gradlew clean test
-```
-
-### Test Categories
-1. **GildedRoseTest**: Core functionality tests
-2. **ItemUpdateStrategyTest**: Strategy-specific tests
-3. **GildedRoseRequirementsTest**: Requirements verification
-4. **LoyaltyProgramTest**: Loyalty program tests
-5. **DiscountBundleTest**: Bundle system tests
-6. **Cucumber Features**: BDD acceptance tests
-
-## Design Patterns
-
-### Strategy Pattern
-Each item type has its own strategy for quality updates:
-- Encapsulates update algorithms
-- Easy to add new item types
-- Follows Open/Closed Principle
-
-### Manager Pattern
-Centralized management for complex subsystems:
-- BundleManager: Handles discount bundles
-- LoyaltyProgramManager: Manages customer loyalty
-
-## Documentation
-
-- **REFACTORING_DOCUMENTATION.md**: Detailed refactoring explanation
-- **REQUIREMENTS_VERIFICATION.md**: Requirements compliance checklist
-- **README.md**: This file
-
-## Code Quality Improvements
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Cyclomatic Complexity | 15 | 2-3 |
-| Lines in updateQuality() | 63 | 10 |
-| Nesting Levels | 5 | 2 |
-| Test Coverage | ~30% | ~95% |
-| Number of Tests | 1 | 85+ |
-
-## Adding New Item Types
-
-Thanks to the Strategy pattern, adding new item types is simple:
-
-```java
-// 1. Create a new strategy
-public class MagicItemStrategy implements ItemUpdateStrategy {
-    @Override
-    public boolean canHandle(Item item) {
-        return item.name.startsWith("Magic");
-    }
-    
-    @Override
-    public void update(Item item) {
-        // Custom update logic
-    }
-}
-
-// 2. Register in GildedRose.initializeStrategies()
-strategies.add(new MagicItemStrategy());
-```
-
-## License
-
-This is an educational project based on the Gilded Rose kata.
-
-## Author
-
-Refactored and extended for "Software Evolution and Maintenance" course.
-
-### How to do the BDD
-
-1. Write a test scenario in Feature file: **src/test/resources/GildedRose.feature**
-2. Modify the StepDefinitions file to match the Feature description in: **src/test/java/com/gildedrose/StepDefinitions.java**
-3. Run: **./gradlew cucumber** from project dir
-
-Note: Please check https://cucumber.io for syntax references.
+Nie wybrano plikuNie wybrano pliku
+ChatGPT może popełniać błędy. Sprawdź ważne informacje. Zobacz Preferencje dotyczące plików cookie.

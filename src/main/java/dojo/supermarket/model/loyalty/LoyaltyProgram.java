@@ -1,9 +1,10 @@
-package com.gildedrose.loyalty;
+package dojo.supermarket.model.loyalty;
 
 /**
  * Represents a customer's loyalty program membership.
+ * Implements LoyaltyStrategy for extensibility and OCP compliance.
  */
-public class LoyaltyProgram {
+public class LoyaltyProgram implements LoyaltyStrategy {
     private String customerId;
     private int points;
     private LoyaltyTier tier;
@@ -58,9 +59,23 @@ public class LoyaltyProgram {
     }
 
     @Override
-    public String toString() {
+    public int calculatePoints(double purchaseAmount) {
+        return (int) Math.floor(purchaseAmount);
+    }
+
+    @Override
+    public double calculateDiscount() {
+        return getTierDiscount();
+    }
+
+    @Override
+    public String getDescription() {
         return String.format("Customer: %s | Tier: %s | Points: %d | Discount: %.0f%%",
             customerId, tier, points, getTierDiscount());
     }
-}
 
+    @Override
+    public String toString() {
+        return getDescription();
+    }
+}

@@ -1,6 +1,7 @@
 package com.gildedrose.discount;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.discount.DiscountBundle;
+import dojo.supermarket.model.gildedrose.Item;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,4 +45,3 @@ class DiscountBundleTest {
         assertEquals(15.0, bundle.getDiscountPercentage());
     }
 }
-

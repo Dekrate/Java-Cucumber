@@ -1,6 +1,7 @@
 package com.gildedrose.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
+import dojo.supermarket.model.strategy.*;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -138,4 +139,3 @@ class StrategyEdgeCasesTest {
         assertFalse(strategy.canHandle(new Item("Aged Brie", 10, 20)));
     }
 }
-

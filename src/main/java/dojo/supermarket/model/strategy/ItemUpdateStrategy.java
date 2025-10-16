@@ -1,6 +1,6 @@
-package com.gildedrose.strategy;
+package dojo.supermarket.model.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
 
 /**
  * Strategy interface for updating item quality and sellIn values.
@@ -20,4 +20,3 @@ public interface ItemUpdateStrategy {
 	 */
 	boolean canHandle(Item item);
 }
-

@@ -1,11 +1,11 @@
-package com.gildedrose;
+package dojo.supermarket.model.gildedrose;
 
-import com.gildedrose.strategy.*;
+import dojo.supermarket.model.strategy.*;
 import java.util.ArrayList;
 import java.util.List;
 
-class GildedRose {
-    Item[] items;
+public class GildedRose {
+    private final Item[] items;
     private List<ItemUpdateStrategy> strategies;
 
     public GildedRose(Item[] items) {
@@ -32,4 +32,8 @@ class GildedRose {
             }
         }
     }
+
+	public Item[] getItems() {
+		return items;
+	}
 }

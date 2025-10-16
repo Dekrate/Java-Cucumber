@@ -1,6 +1,7 @@
 package com.gildedrose.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
+import dojo.supermarket.model.strategy.NormalItemStrategy;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -115,4 +116,3 @@ class StrategyHelperMethodsTest {
         assertEquals(-6, item.sellIn);
     }
 }
-

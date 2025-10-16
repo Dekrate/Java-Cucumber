@@ -1,6 +1,6 @@
-package com.gildedrose.strategy;
+package dojo.supermarket.model.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
 
 /**
  * Strategy for Backstage passes which increase in quality as the concert approaches.
@@ -37,4 +37,3 @@ public class BackstagePassStrategy implements ItemUpdateStrategy {
         item.quality = Math.min(50, item.quality + amount);
     }
 }
-

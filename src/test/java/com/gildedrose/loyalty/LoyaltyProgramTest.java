@@ -1,7 +1,10 @@
 package com.gildedrose.loyalty;
 
+import dojo.supermarket.model.loyalty.LoyaltyProgram;
+import dojo.supermarket.model.loyalty.LoyaltyTier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class LoyaltyProgramTest {

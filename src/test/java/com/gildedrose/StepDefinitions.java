@@ -2,9 +2,11 @@ package com.gildedrose;
 
 import static org.junit.Assert.*;
 
-import com.gildedrose.discount.DiscountBundle;
-import com.gildedrose.loyalty.LoyaltyProgramManager;
-import com.gildedrose.loyalty.LoyaltyProgram;
+import dojo.supermarket.model.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.GildedRose;
+import dojo.supermarket.model.gildedrose.discount.DiscountBundle;
+import dojo.supermarket.model.loyalty.LoyaltyProgramManager;
+import dojo.supermarket.model.loyalty.LoyaltyProgram;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -30,8 +32,8 @@ public class StepDefinitions {
 
     @Then("the item should have sellIn {int} and quality {int}")
     public void the_item_should_have_sellin_and_quality(Integer expectedSellIn, Integer expectedQuality) {
-        assertEquals(expectedSellIn.intValue(), app.items[0].sellIn);
-        assertEquals(expectedQuality.intValue(), app.items[0].quality);
+        assertEquals(expectedSellIn.intValue(), app.getItems()[0].sellIn);
+        assertEquals(expectedQuality.intValue(), app.getItems()[0].quality);
     }
 
     @Given("I have a customer {string} with {int} loyalty points")

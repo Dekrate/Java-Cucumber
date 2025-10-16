@@ -1,6 +1,6 @@
-package com.gildedrose.strategy;
+package dojo.supermarket.model.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
 
 /**
  * Strategy for Conjured items that degrade twice as fast as normal items.

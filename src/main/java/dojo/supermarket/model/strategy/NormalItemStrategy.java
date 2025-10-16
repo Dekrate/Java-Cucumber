@@ -1,6 +1,6 @@
-package com.gildedrose.strategy;
+package dojo.supermarket.model.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
 
 /**
  * Strategy for normal items that degrade in quality over time.
@@ -39,4 +39,3 @@ public class NormalItemStrategy implements ItemUpdateStrategy {
         item.sellIn--;
     }
 }
-

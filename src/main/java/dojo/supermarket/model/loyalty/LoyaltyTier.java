@@ -1,4 +1,4 @@
-package com.gildedrose.loyalty;
+package dojo.supermarket.model.loyalty;
 
 /**
  * Represents different tiers in the loyalty program.

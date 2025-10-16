@@ -1,4 +1,4 @@
-package com.gildedrose;
+package dojo.supermarket.model.gildedrose;
 
 public class Item {
 

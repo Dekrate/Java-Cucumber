@@ -1,5 +1,7 @@
 package com.gildedrose;
 
+import dojo.supermarket.model.gildedrose.GildedRose;
+import dojo.supermarket.model.gildedrose.Item;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -152,8 +154,8 @@ class GildedRoseRequirementsTest {
         // Verify items property is accessible (as required)
         Item[] items = new Item[] { new Item("Test", 10, 20) };
         GildedRose app = new GildedRose(items);
-        assertNotNull(app.items);
-        assertEquals(1, app.items.length);
+        assertNotNull(app.getItems());
+        assertEquals(1, app.getItems().length);
     }
 
     @Test

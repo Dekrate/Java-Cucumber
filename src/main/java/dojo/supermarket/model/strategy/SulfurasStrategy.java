@@ -1,6 +1,6 @@
-package com.gildedrose.strategy;
+package dojo.supermarket.model.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
 
 /**
  * Strategy for Sulfuras (legendary item).
@@ -18,4 +18,3 @@ public class SulfurasStrategy implements ItemUpdateStrategy {
         return item.name.equals("Sulfuras, Hand of Ragnaros");
     }
 }
-

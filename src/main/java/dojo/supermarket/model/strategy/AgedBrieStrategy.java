@@ -1,6 +1,6 @@
-package com.gildedrose.strategy;
+package dojo.supermarket.model.strategy;
 
-import com.gildedrose.Item;
+import dojo.supermarket.model.gildedrose.Item;
 
 /**
  * Strategy for Aged Brie which increases in quality over time.
@@ -26,4 +26,3 @@ public class AgedBrieStrategy implements ItemUpdateStrategy {
         item.quality = Math.min(50, item.quality + amount);
     }
 }
-
