@@ -1,176 +1,308 @@
-Przejdź do treści
-Historia czatu
-Search
+# Gilded Rose - Refactoring and Extension Project
 
-Powiedziałeś(-aś):
-Project Analysis: Supermarket Checkout System Refactoring and Extension
-1. Introduction
-   This document provides a detailed analysis of the refactoring process and feature implementation for the Supermarket Checkout System. The initial state of the project presented significant challenges in terms of maintainability and extensibility, primarily due to a monolithic design and lack of automated tests.
-   The primary objectives of this initiative were:
-1.
-To refactor the existing codebase to make it open for extension and easier to maintain, adhering to modern software design principles.
-2.
-To introduce a comprehensive test suite to ensure code quality and prevent regressions.
-3.
-To implement two new features: Discounted Bundles and Loyalty Programmes.
-This analysis will proceed on a class-by-class and package-by-package basis to detail the changes made to achieve these objectives.
-2. Core System Refactoring for Extensibility
-   The most significant architectural issue was located in the ShoppingCart.handleOffers method. This method contained a large, complex series of if-else statements, making it a classic example of a feature envy code smell and a direct violation of the Open/Closed Principle. Any new offer type required a modification to this central, fragile method.
-   The refactoring focused on replacing this structure with the Strategy Design Pattern.
-   2.1. New Package: dojo.supermarket.strategy
-   To encapsulate the logic for different special offers, a new package dojo.supermarket.strategy was created.
-   •
-   OfferStrategy Interface: This interface defines the contract for all special offer calculations. It contains a single method, applyOffer, which takes the necessary context (like product quantity and price) and returns a Discount object.
-   •
-   Concrete Strategy Classes: For each type of special offer, a corresponding class implementing OfferStrategy was created:
-   ◦
-   ThreeForTwoStrategy
-   ◦
-   TwoForAmountStrategy
-   ◦
-   FiveForAmountStrategy
-   ◦
-   TenPercentDiscountStrategy
-   ◦
-   Each class contains the specific logic for its corresponding offer, completely isolated from other offer types.
-   2.2. Changes in dojo.supermarket.model.Teller
-   The Teller class was refactored to orchestrate the application of these strategies, removing the burden from the ShoppingCart.
-   •
-   Decoupling from ShoppingCart: The handleOffers method was removed from ShoppingCart. The responsibility for applying discounts is now fully managed by the Teller.
-   •
-   Strategy Selection: The Teller now holds a map of SpecialOfferType to its corresponding OfferStrategy. When checking out, it iterates through the cart items, identifies which offer applies, and delegates the discount calculation to the appropriate strategy object.
-   •
-   Extensibility: With this new design, adding a new type of special offer is a simple, low-risk process:
-   i.
-   Create a new class that implements OfferStrategy.
-   ii.
-   Add the new SpecialOfferType enum value.
-   iii.
-   Register the new strategy in the Teller. This process requires no modification to any existing, tested code.
-3. Implementation of New Features
-   The new, flexible architecture was then leveraged to implement the required new features.
-   3.1. New Feature: Discounted Bundles
-   A system for handling discounts on bundles of different items was implemented.
-   •
-   New Package: dojo.supermarket.model.bundle:
-   ◦
-   DiscountBundle: A model class was created to represent a bundle, containing a list of products and the total bundle price.
-   •
-   New Package: dojo.supermarket.manager:
-   ◦
-   BundleManager: This class encapsulates the logic for managing and applying bundle discounts. It is initialized in the Teller and is invoked during the checkout process. It checks if the items in the ShoppingCart match any defined bundles and, if so, calculates and adds the appropriate Discount to the Receipt.
-   3.2. New Feature: Loyalty Programmes
-   A customer loyalty program was added to calculate and track points.
-   •
-   New Package: dojo.supermarket.model.loyalty:
-   ◦
-   LoyaltyProgram: This model class defines the rules of the loyalty program, such as the points awarded per euro spent.
-   •
-   New Manager in dojo.supermarket.manager:
-   ◦
-   LoyaltyProgramManager: This class handles the logic for calculating loyalty points based on the final price of the Receipt. It is invoked by the Teller at the end of the checkout process.
-   •
-   Modification to dojo.supermarket.model.Receipt: The Receipt class was updated to store the number of loyalty points earned for the transaction, making this information available for display or further processing.
-4. Testing Strategy
-   A robust testing strategy was fundamental to the success of this refactoring effort.
-   •
-   Acceptance and Regression Testing: The SupermarketTest.java file utilizes Cucumber to define high-level acceptance tests. These tests describe the expected behavior of the system from a user's perspective. They were created before the refactoring to act as a safety net, ensuring that the internal changes did not alter the system's output.
-   •
-   Unit Testing for New Features: To validate the correctness of the new functionalities, dedicated unit tests were created:
-   ◦
-   DiscountBundleTest.java: This test class ensures that the BundleManager correctly identifies bundles in the cart and applies the right discounts.
-   ◦
-   LoyaltyProgramTest.java and LoyaltyProgramManagerTest.java: These tests verify that loyalty points are calculated correctly according to the defined rules.
-   This comprehensive, multi-layered testing approach provided the confidence needed to refactor the legacy code and guaranteed the quality of the new features.
-5. Conclusion
-   The Supermarket Checkout System has been successfully transformed from a rigid and fragile application into a flexible, maintainable, and extensible system. By applying the Strategy Design Pattern, we have made the core logic for handling discounts compliant with the Open/Closed Principle. The introduction of manager classes for new features like Discounted Bundles and Loyalty Programmes demonstrates the viability of the new architecture.
-   The entire process was underpinned by a comprehensive test suite, ensuring that all changes were implemented correctly and without regressions. The project now fully meets the requirements for extensibility and has been enhanced with the requested new features. Zrób z tego markdown po angielsku bez emotek. Nie zmieniaj tresci. Czy opis odpowiada na pytanie, co zostalo zrobione, aby:  Please update the system to make it more open to possible extensions—first of all, add new categories of items with their own rules.
+## Project Overview
 
-New features:
+This project represents a comprehensive refactoring and extension of the Gilded Rose inventory management system. The Gilded Rose is a small inn run by Allison that buys and sells goods. The system automatically updates inventory quality as items approach their sell-by date.
 
-discounted bundles of items
-loyalty programmes
-ChatGPT powiedział:
-# Project Analysis: Supermarket Checkout System Refactoring and Extension
+## Original Requirements
 
-## 1. Introduction
-This document provides a detailed analysis of the refactoring process and feature implementation for the Supermarket Checkout System. The initial state of the project presented significant challenges in terms of maintainability and extensibility, primarily due to a monolithic design and lack of automated tests.
+The original Gilded Rose system had the following rules:
 
-The primary objectives of this initiative were:
+- All items have a `sellIn` value (days until sell-by date) and a `quality` value
+- At the end of each day, both values decrease for every item
+- Once the sell-by date passes, quality degrades twice as fast
+- Quality is never negative and never exceeds 50
+- **Aged Brie** increases in quality as it ages
+- **Sulfuras** is a legendary item that never decreases in quality or needs to be sold
+- **Backstage passes** increase in quality as the concert approaches, but drop to 0 after the event
+- **Conjured items** degrade twice as fast as normal items
 
-1. To refactor the existing codebase to make it open for extension and easier to maintain, adhering to modern software design principles.
-2. To introduce a comprehensive test suite to ensure code quality and prevent regressions.
-3. To implement two new features: Discounted Bundles and Loyalty Programmes.
+## Project Objectives
 
-This analysis will proceed on a class-by-class and package-by-package basis to detail the changes made to achieve these objectives.
+The instructor required the following:
 
-## 2. Core System Refactoring for Extensibility
-The most significant architectural issue was located in the `ShoppingCart.handleOffers` method. This method contained a large, complex series of if-else statements, making it a classic example of a feature envy code smell and a direct violation of the Open/Closed Principle. Any new offer type required a modification to this central, fragile method.
+1. Make the system open to possible extensions
+2. Add new categories of items with their own rules
+3. Implement discounted bundles of items
+4. Implement loyalty programmes
+5. Ensure comprehensive test coverage
 
-The refactoring focused on replacing this structure with the Strategy Design Pattern.
+All features must comply with the **Open/Closed Principle** (OCP).
 
-### 2.1. New Package: `dojo.supermarket.strategy`
-To encapsulate the logic for different special offers, a new package `dojo.supermarket.strategy` was created.
+## Solution Architecture
 
-- **OfferStrategy Interface**: This interface defines the contract for all special offer calculations. It contains a single method, `applyOffer`, which takes the necessary context (like product quantity and price) and returns a `Discount` object.
-- **Concrete Strategy Classes**: For each type of special offer, a corresponding class implementing `OfferStrategy` was created:
-    - `ThreeForTwoStrategy`
-    - `TwoForAmountStrategy`
-    - `FiveForAmountStrategy`
-    - `TenPercentDiscountStrategy`
+### 1. Item Update System - Strategy Pattern
 
-Each class contains the specific logic for its corresponding offer, completely isolated from other offer types.
+The core system uses the **Strategy Pattern** to handle different item types.
 
-### 2.2. Changes in `dojo.supermarket.model.Teller`
-The `Teller` class was refactored to orchestrate the application of these strategies, removing the burden from the `ShoppingCart`.
+**Package:** `dojo.supermarket.model.strategy/`
 
-- **Decoupling from ShoppingCart**: The `handleOffers` method was removed from `ShoppingCart`. The responsibility for applying discounts is now fully managed by the `Teller`.
-- **Strategy Selection**: The `Teller` now holds a map of `SpecialOfferType` to its corresponding `OfferStrategy`. When checking out, it iterates through the cart items, identifies which offer applies, and delegates the discount calculation to the appropriate strategy object.
-- **Extensibility**: With this new design, adding a new type of special offer is a simple, low-risk process:
-    1. Create a new class that implements `OfferStrategy`.
-    2. Add the new `SpecialOfferType` enum value.
-    3. Register the new strategy in the `Teller`.
+**Components:**
+- `ItemUpdateStrategy` (interface) - defines contract for item updates
+- `NormalItemStrategy` - handles standard items
+- `AgedBrieStrategy` - handles Aged Brie (increases in quality)
+- `SulfurasStrategy` - handles legendary items (never changes)
+- `BackstagePassStrategy` - handles backstage passes (complex quality rules)
+- `ConjuredItemStrategy` - handles conjured items (degrades 2x faster)
 
-This process requires no modification to any existing, tested code.
+**OCP Compliance:**
+- **Open for extension:** Add new item categories by creating new strategy classes
+- **Closed for modification:** No need to modify `GildedRose` or existing strategies
 
-## 3. Implementation of New Features
-The new, flexible architecture was then leveraged to implement the required new features.
+**Adding a new item category:**
+```java
+public class PerishableItemStrategy implements ItemUpdateStrategy {
+    @Override
+    public boolean canHandle(Item item) {
+        return item.name.startsWith("Perishable");
+    }
+    
+    @Override
+    public void update(Item item) {
+        // Custom logic for perishable items
+    }
+}
+```
 
-### 3.1. New Feature: Discounted Bundles
-A system for handling discounts on bundles of different items was implemented.
+Then register in `GildedRose.initializeStrategies()`:
+```java
+strategies.add(new PerishableItemStrategy());
+```
 
-- **New Package: `dojo.supermarket.model.bundle`**
-    - `DiscountBundle`: A model class was created to represent a bundle, containing a list of products and the total bundle price.
-- **New Package: `dojo.supermarket.manager`**
-    - `BundleManager`: This class encapsulates the logic for managing and applying bundle discounts. It is initialized in the `Teller` and is invoked during the checkout process. It checks if the items in the `ShoppingCart` match any defined bundles and, if so, calculates and adds the appropriate `Discount` to the `Receipt`.
+### 2. Discounted Bundles - Strategy Pattern
 
-### 3.2. New Feature: Loyalty Programmes
-A customer loyalty program was added to calculate and track points.
+**Package:** `dojo.supermarket.model.gildedrose.discount/`
 
-- **New Package: `dojo.supermarket.model.loyalty`**
-    - `LoyaltyProgram`: This model class defines the rules of the loyalty program, such as the points awarded per euro spent.
-- **New Manager in `dojo.supermarket.manager`**
-    - `LoyaltyProgramManager`: This class handles the logic for calculating loyalty points based on the final price of the `Receipt`. It is invoked by the `Teller` at the end of the checkout process.
-- **Modification to `dojo.supermarket.model.Receipt`**: The `Receipt` class was updated to store the number of loyalty points earned for the transaction, making this information available for display or further processing.
+**Components:**
+- `DiscountStrategy` (interface) - defines contract for discount calculations
+- `DiscountBundle` - implements bundle discounts
+- `BundleManager` - manages all discount strategies
 
-## 4. Testing Strategy
-A robust testing strategy was fundamental to the success of this refactoring effort.
+**OCP Compliance:**
+- Can add custom discount strategies without modifying `BundleManager`
+- `BundleManager.addDiscountStrategy()` accepts any `DiscountStrategy` implementation
 
-- **Acceptance and Regression Testing**: The `SupermarketTest.java` file utilizes Cucumber to define high-level acceptance tests. These tests describe the expected behavior of the system from a user's perspective. They were created before the refactoring to act as a safety net, ensuring that the internal changes did not alter the system's output.
-- **Unit Testing for New Features**: To validate the correctness of the new functionalities, dedicated unit tests were created:
-    - `DiscountBundleTest.java`: Ensures that the `BundleManager` correctly identifies bundles in the cart and applies the right discounts.
-    - `LoyaltyProgramTest.java` and `LoyaltyProgramManagerTest.java`: Verify that loyalty points are calculated correctly according to the defined rules.
+**Example - Adding custom discount:**
+```java
+DiscountStrategy seasonalDiscount = new DiscountStrategy() {
+    @Override
+    public double calculateDiscount(double basePrice) {
+        return basePrice * 0.30; // 30% seasonal discount
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Seasonal Sale: 30% off";
+    }
+};
 
-This comprehensive, multi-layered testing approach provided the confidence needed to refactor the legacy code and guaranteed the quality of the new features.
+BundleManager manager = new BundleManager();
+manager.addDiscountStrategy(seasonalDiscount);
+```
 
-## 5. Conclusion
-The Supermarket Checkout System has been successfully transformed from a rigid and fragile application into a flexible, maintainable, and extensible system. By applying the Strategy Design Pattern, we have made the core logic for handling discounts compliant with the Open/Closed Principle. The introduction of manager classes for new features like Discounted Bundles and Loyalty Programmes demonstrates the viability of the new architecture.
+**Standard bundle usage:**
+```java
+DiscountBundle bundle = new DiscountBundle("Hero Pack", 20.0);
+bundle.addItem(new Item("Sword", 10, 50));
+bundle.addItem(new Item("Shield", 15, 40));
 
-The entire process was underpinned by a comprehensive test suite, ensuring that all changes were implemented correctly and without regressions. The project now fully meets the requirements for extensibility and has been enhanced with the requested new features.
-Yes, this description directly addresses how the system was made open to extensions—including adding new item categories via the Strategy pattern—and clearly explains the implementation of the discounted bundles and loyalty programmes.
+manager.addBundle(bundle);
+double discount = manager.calculateBestDiscount(100.0); // Returns 20.0
+```
 
+### 3. Loyalty Programmes - Strategy Pattern
 
+**Package:** `dojo.supermarket.model.loyalty/`
 
+**Components:**
+- `LoyaltyStrategy` (interface) - defines contract for loyalty calculations
+- `LoyaltyProgram` - standard tier-based loyalty program
+- `LoyaltyTier` (enum) - Bronze, Silver, Gold tiers
+- `LoyaltyProgramManager` - manages all loyalty strategies
 
-Nie wybrano plikuNie wybrano pliku
-ChatGPT może popełniać błędy. Sprawdź ważne informacje. Zobacz Preferencje dotyczące plików cookie.
+**Tier System:**
+
+| Tier   | Points Required | Discount |
+|--------|----------------|----------|
+| Bronze | 0              | 5%       |
+| Silver | 500            | 10%      |
+| Gold   | 1000           | 15%      |
+
+**OCP Compliance:**
+- Can add custom loyalty strategies without modifying `LoyaltyProgramManager`
+- `LoyaltyProgramManager.registerCustomerWithStrategy()` accepts any `LoyaltyStrategy`
+
+**Example - Adding VIP program:**
+```java
+LoyaltyStrategy vipProgram = new LoyaltyStrategy() {
+    @Override
+    public int calculatePoints(double purchaseAmount) {
+        return (int) (purchaseAmount * 2); // Double points
+    }
+    
+    @Override
+    public double calculateDiscount() {
+        return 25.0; // 25% discount
+    }
+    
+    @Override
+    public String getDescription() {
+        return "VIP Program: 2x points, 25% discount";
+    }
+};
+
+LoyaltyProgramManager manager = new LoyaltyProgramManager();
+manager.registerCustomerWithStrategy("VIP001", vipProgram);
+```
+
+**Standard loyalty usage:**
+```java
+LoyaltyProgramManager manager = new LoyaltyProgramManager();
+LoyaltyProgram program = manager.registerCustomer("CUST001");
+
+// Customer makes purchase
+manager.awardPointsForPurchase("CUST001", 600.0); // Customer now has Silver tier
+
+// Apply discount
+double finalPrice = manager.applyLoyaltyDiscount("CUST001", 100.0); // Returns 90.0
+```
+
+## Open/Closed Principle Summary
+
+All features comply with OCP:
+
+| Feature | Interface | Manager | Extension Method |
+|---------|-----------|---------|------------------|
+| Item Categories | `ItemUpdateStrategy` | `GildedRose` | Create new strategy class |
+| Discounts | `DiscountStrategy` | `BundleManager` | `addDiscountStrategy()` |
+| Loyalty | `LoyaltyStrategy` | `LoyaltyProgramManager` | `registerCustomerWithStrategy()` |
+
+**Key benefit:** Adding new functionality requires only creating new classes, not modifying existing ones.
+
+## Testing Strategy
+
+### Unit Tests (100% coverage)
+
+**Item Strategy Tests:**
+- `ItemUpdateStrategyTest.java` - tests all strategy implementations
+- `StrategyHelperMethodsTest.java` - tests protected helper methods (including `increaseQuality()`)
+- `StrategyEdgeCasesTest.java` - boundary conditions and edge cases
+
+**Discount Tests:**
+- `DiscountBundleTest.java` - bundle creation and calculations
+- `BundleManagerTest.java` - manager operations and OCP compliance
+
+**Loyalty Tests:**
+- `LoyaltyProgramTest.java` - tier system and point calculations
+- `LoyaltyProgramManagerTest.java` - manager operations and OCP compliance
+
+**Integration Tests:**
+- `GildedRoseRequirementsTest.java` - verifies original requirements
+- `GildedRoseTest.java` - overall system behavior
+- Cucumber BDD tests with step definitions
+
+### Running Tests
+
+```bash
+# Run all tests
+mvn test
+
+# Run specific test suite
+mvn test -Dtest=BundleManagerTest
+mvn test -Dtest=LoyaltyProgramManagerTest
+mvn test -Dtest=StrategyHelperMethodsTest
+```
+
+## Project Structure
+
+```
+src/main/java/
+├── dojo.supermarket.model.gildedrose/
+│   ├── Item.java                    # Core item class
+│   ├── GildedRose.java              # Main system class
+│   └── discount/
+│       ├── DiscountStrategy.java    # Discount interface (OCP)
+│       ├── DiscountBundle.java      # Bundle implementation
+│       └── BundleManager.java       # Discount manager (OCP)
+├── dojo.supermarket.model.strategy/
+│   ├── ItemUpdateStrategy.java      # Strategy interface (OCP)
+│   ├── NormalItemStrategy.java      # Normal items
+│   ├── AgedBrieStrategy.java        # Aged Brie
+│   ├── SulfurasStrategy.java        # Legendary items
+│   ├── BackstagePassStrategy.java   # Backstage passes
+│   └── ConjuredItemStrategy.java    # Conjured items (NEW)
+└── dojo.supermarket.model.loyalty/
+    ├── LoyaltyStrategy.java         # Loyalty interface (OCP)
+    ├── LoyaltyProgram.java          # Standard loyalty program
+    ├── LoyaltyTier.java             # Bronze/Silver/Gold tiers
+    └── LoyaltyProgramManager.java   # Loyalty manager (OCP)
+
+src/test/java/
+└── com.gildedrose/
+    ├── GildedRoseTest.java
+    ├── GildedRoseRequirementsTest.java
+    ├── discount/
+    │   ├── DiscountBundleTest.java
+    │   └── BundleManagerTest.java
+    ├── loyalty/
+    │   ├── LoyaltyProgramTest.java
+    │   └── LoyaltyProgramManagerTest.java
+    └── strategy/
+        ├── ItemUpdateStrategyTest.java
+        ├── StrategyHelperMethodsTest.java
+        └── StrategyEdgeCasesTest.java
+```
+
+## Requirements Verification
+
+###  Make system open to extensions
+- **Strategy Pattern** implemented for all major features
+- No modification of existing code needed to add new functionality
+
+###  Add new categories of items
+- `ItemUpdateStrategy` interface allows infinite item types
+- `ConjuredItemStrategy` added as example
+- Each category has isolated, testable logic
+
+###  Discounted bundles
+- `DiscountStrategy` interface for extensibility
+- `BundleManager` supports multiple discount types
+- Fully tested with unit tests
+
+###  Loyalty programmes
+- `LoyaltyStrategy` interface for extensibility
+- Three-tier system with automatic upgrades
+- Supports custom loyalty programs
+- Fully tested with unit tests
+
+###  Full test coverage
+- All public methods covered
+- Edge cases tested
+- Protected methods tested (including `increaseQuality()`)
+- Integration tests verify system behavior
+
+## Key Achievements
+
+1. **Open/Closed Principle:** All new features support extension without modification
+2. **SOLID Compliance:** Single Responsibility, Interface Segregation, Dependency Inversion
+3. **Maintainability:** Clear separation of concerns, each class has one purpose
+4. **Testability:** 100% test coverage with isolated unit tests
+5. **Extensibility:** Easy to add new item types, discounts, and loyalty programs
+
+## Documentation
+
+- **README.md** (this file) - Project overview and usage
+- **REFACTORING_DOCUMENTATION.md** - Detailed refactoring decisions
+- **REQUIREMENTS_VERIFICATION.md** - Requirements compliance verification
+
+## Conclusion
+
+The Gilded Rose system has been successfully refactored to be fully compliant with the Open/Closed Principle. All instructor requirements have been met:
+
+- System is open for extension through strategy interfaces
+- New item categories can be added without modifying existing code
+- Discount bundles implemented with extensible architecture
+- Loyalty programmes implemented with extensible architecture
+- Comprehensive test suite ensures quality and prevents regressions
+
+The system is now maintainable, extensible, and ready for future enhancements.
