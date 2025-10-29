@@ -303,6 +303,45 @@ loyaltyManager.addLoyaltyProgram(new PlatinumLoyaltyTier());
 - **Closed for modification**: `LoyaltyProgramManager` logic remains unchanged
 - Tier determination uses polymorphism instead of conditional logic
 
+## Architectural Analysis and Alternative Solutions
+
+The selection of the **Strategy Pattern** for the special offers system was a deliberate architectural decision. This section explores the rationale behind this choice, compares it with other potential patterns, and discusses the trade-offs involved.
+
+### Why the Strategy Pattern?
+
+The primary goal was to replace the rigid `if-else` structure in `ShoppingCart.handleOffers()` with a flexible and extensible solution. The Strategy Pattern was chosen because it perfectly aligns with the **Open/Closed Principle** in this context:
+
+- **Encapsulation of Algorithms**: Each offer type (e.g., "3 for 2", "10% discount") is an independent algorithm. The Strategy Pattern encapsulates each algorithm into its own class (`ThreeForTwoStrategy`, `PercentageDiscountStrategy`).
+- **Single Responsibility Principle (SRP)**: Each strategy class has only one reason to change: a modification to its specific discount calculation logic. This prevents a single monolithic class from becoming bloated with unrelated responsibilities.
+- **Simplicity and Clarity**: The client code (`ShoppingCart`) becomes much simpler. It no longer needs to know the details of each offer. It simply obtains the correct strategy from a factory and executes it. This delegation of responsibility makes the code easier to read and maintain.
+
+### Alternative 1: Visitor Pattern
+
+The Visitor Pattern is another behavioral pattern that can be used to add new operations to an object structure without modifying the objects themselves.
+
+- **How it would work**: We could have a `DiscountVisitor` interface with methods like `visit(ThreeForTwoOffer offer)`, `visit(PercentageDiscountOffer offer)`, etc. The `Offer` objects would have an `accept(DiscountVisitor visitor)` method.
+- **Why it was not chosen**:
+    - **Violation of OCP for New Offers**: The core issue with the Visitor pattern here is that the `Visitor` interface must be modified every time a new offer type (a new `Visitable` class) is added. For example, adding a `BuyOneGetOneFreeOffer` would require adding a new `visit(BuyOneGetOneFreeOffer offer)` method to the `DiscountVisitor` interface and all its implementations. This violates the Open/Closed Principle, which was the primary problem we aimed to solve.
+    - **Complexity**: While powerful, the Visitor pattern introduces a "double dispatch" mechanism that can be more complex to understand and implement compared to the straightforward nature of the Strategy pattern in this scenario.
+
+The Strategy Pattern is superior here because adding a new offer type only requires creating a new strategy class and registering it with the factory—no existing code needs to be modified.
+
+### Alternative 2: Chain of Responsibility Pattern
+
+This pattern could be used to create a chain of offer-handling objects. Each handler would check if it could apply its discount and, if not, pass the request to the next handler in the chain.
+
+- **How it would work**: We could create a chain of `OfferHandler` objects. The `ShoppingCart` would pass the product and quantity to the head of the chain.
+- **Why it was not chosen**:
+    - **Not a Natural Fit for This Problem**: The Chain of Responsibility pattern excels when there is a sequence of potential handlers for a single request, and only one handler is expected to process it (or the chain is processed in a specific order). In our case, a product has one specific offer type associated with it (`Offer.offerType`). We don't need to "discover" which offer applies; we already know. We just need to execute the correct algorithm.
+    - **Unnecessary Overhead**: Using a chain introduces complexity (managing the chain, passing requests) that is not required here. A direct lookup in a factory (as used with the Strategy pattern) is far more efficient and direct. The `Map` in `OfferStrategyFactory` provides an O(1) lookup, which is more performant than traversing a chain.
+
+### Trade-offs of the Chosen Approach (Strategy Pattern)
+
+While the Strategy Pattern provides significant benefits, it's important to acknowledge its trade-offs:
+
+- **Increased Number of Classes**: The most noticeable trade-off is the proliferation of classes. Each new offer type requires a new class. In a system with dozens of offers, this can lead to a large number of small files. However, this is a manageable complexity, and modern IDEs make navigating between these classes easy. The benefit of clear separation of concerns far outweighs the cost of having more classes.
+- **Indirection via Factory**: The introduction of the `OfferStrategyFactory` adds a layer of indirection. While this is what enables the decoupling and adherence to OCP, it means a developer needs to understand that the strategies are registered and retrieved from the factory. This is a minor learning curve compared to deciphering a complex `if-else` block.
+
 ## System Integration
 
 All components work together in the `Teller` class:
@@ -453,4 +492,3 @@ This refactored system demonstrates the Open/Closed Principle through:
 4. **Interface-based design** for product categories
 
 All new features can be added through extension rather than modification, making the system robust, maintainable, and easy to test.
-
