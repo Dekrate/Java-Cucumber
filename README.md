@@ -322,8 +322,6 @@ Receipt receipt = teller.checksOutArticlesFrom(
 - Easier testing
 - Better encapsulation of business rules
 
-## Week 6: Cleanup and Quality Assurance
-
 ### Code Style Compliance (Checkstyle)
 
 Fixed Checkstyle violations according to Sun Checks standard:
