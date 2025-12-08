@@ -3,19 +3,23 @@ package dojo.supermarket.model.offer;
 import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 
-/**
- * Percentage discount offer strategy.
- */
-public class PercentageDiscountStrategy implements OfferStrategy {
+public final class PercentageDiscountStrategy
+        implements DiscountStrategy {
+
+    /** Divisor to convert percentage to decimal. */
+    private static final double PERCENTAGE_DIVISOR = 100.0;
 
     @Override
-    public Discount calculateDiscount(Product product, double quantity, double unitPrice, double argument) {
-        double discountAmount = quantity * unitPrice * argument / 100.0;
-        return new Discount(product, argument + "% off", -discountAmount);
-    }
+    public Discount calculateDiscount(final Product product,
+                                       final double quantity,
+                                       final double unitPrice,
+                                       final double argument) {
+        final double totalPrice = quantity * unitPrice;
+        final double discountAmount =
+                totalPrice * argument / PERCENTAGE_DIVISOR;
 
-    @Override
-    public String getDescription() {
-        return "Percentage discount";
+        return new Discount(product,
+                String.format("%.0f%% off", argument),
+                -discountAmount);
     }
 }

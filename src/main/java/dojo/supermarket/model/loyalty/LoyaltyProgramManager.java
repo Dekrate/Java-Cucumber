@@ -1,57 +1,134 @@
-
-
 package dojo.supermarket.model.loyalty;
 
 import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
-
-import java.util.ArrayList;
-import java.util.List;
+import dojo.supermarket.model.ProductUnit;
 
 /**
- * Manages customer loyalty programs and applies loyalty discounts.
- * Follows Open/Closed Principle - new loyalty tiers can be added without code changes.
+ * Manages loyalty program functionality.
+ * Implements Service pattern for loyalty-related business logic.
+ *
+ * @param pointsPerCurrencyUnit -- GETTER --
+ *                              Gets points per currency unit.
+ * @param currencyPerPoint      -- GETTER --
+ *                              Gets currency per point.
  */
-public class LoyaltyProgramManager {
+public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
+                                    double currencyPerPoint) {
 
-    private final List<LoyaltyProgram> programs = new ArrayList<>();
+    /**
+     * Default points per currency unit.
+     */
+    private static final double DEFAULT_POINTS_PER_CURRENCY_UNIT = 1.0;
 
+    /**
+     * Default currency per point.
+     */
+    private static final double DEFAULT_CURRENCY_PER_POINT = 0.01;
+
+    /**
+     * Creates a loyalty program manager with default rates.
+     */
     public LoyaltyProgramManager() {
-        // Register default loyalty tiers
-        programs.add(new GoldLoyaltyTier());
-        programs.add(new SilverLoyaltyTier());
-        programs.add(new BasicLoyaltyTier());
-    }
-
-    public void addLoyaltyProgram(LoyaltyProgram program) {
-        programs.add(program);
+        this(DEFAULT_POINTS_PER_CURRENCY_UNIT,
+                DEFAULT_CURRENCY_PER_POINT);
     }
 
     /**
-     * Determines the applicable loyalty tier based on purchase amount.
-     * Returns the highest tier that the customer qualifies for.
+     * Creates a loyalty program manager with custom rates.
+     *
+     * @param pointsPerCurrencyUnit points earned per currency unit
+     * @param currencyPerPoint      currency value of one point
      */
-    public LoyaltyProgram getApplicableTier(double totalAmount) {
-        for (LoyaltyProgram program : programs) {
-            if (program.isApplicable(totalAmount)) {
-                return program;
-            }
-        }
-        return new BasicLoyaltyTier();
+    public LoyaltyProgramManager {
     }
 
     /**
-     * Calculates loyalty discount based on the customer's tier.
+     * Calculates points earned from a purchase amount.
+     *
+     * @param amount the purchase amount
+     * @return points earned
      */
-    public Discount calculateLoyaltyDiscount(double subtotal, Product representativeProduct) {
-        LoyaltyProgram tier = getApplicableTier(subtotal);
+    public double calculatePointsEarned(final double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException(
+                    "Amount cannot be negative");
+        }
+        return amount * pointsPerCurrencyUnit;
+    }
 
-        if (tier.getDiscountPercentage() > 0) {
-            double discountAmount = subtotal * tier.getDiscountPercentage() / 100.0;
-            String description = tier.getTierName() + " Member - " + tier.getDiscountPercentage() + "% off";
-            return new Discount(representativeProduct, description, -discountAmount);
+    /**
+     * Converts points to currency value.
+     *
+     * @param points the points to convert
+     * @return currency value
+     */
+    public double convertPointsToCurrency(final double points) {
+        if (points < 0) {
+            throw new IllegalArgumentException(
+                    "Points cannot be negative");
+        }
+        return points * currencyPerPoint;
+    }
+
+    /**
+     * Applies loyalty points as payment discount.
+     *
+     * @param card        the loyalty card
+     * @param totalAmount the total purchase amount
+     * @param pointsToUse points customer wants to use
+     * @return Discount object if successful, null otherwise
+     */
+    public Discount applyLoyaltyPoints(final LoyaltyCard card,
+                                       final double totalAmount,
+                                       final double pointsToUse) {
+        if (card == null) {
+            return null;
         }
 
-        return null;
+        if (pointsToUse <= 0) {
+            return null;
+        }
+
+        final double maxPoints = totalAmount / currencyPerPoint;
+        final double actualPointsToUse = Math.min(pointsToUse,
+                Math.min(maxPoints, card.getPoints()));
+
+        if (actualPointsToUse <= 0) {
+            return null;
+        }
+
+        if (!card.usePoints(actualPointsToUse)) {
+            return null;
+        }
+
+        final double discountAmount =
+                convertPointsToCurrency(actualPointsToUse);
+
+        final Product loyaltyProduct = new Product(
+                "Loyalty Points Payment",
+                ProductUnit.EACH);
+
+        final String description = String.format(
+                "Loyalty Points (%.0f points)", actualPointsToUse);
+
+        return new Discount(loyaltyProduct, description,
+                -discountAmount);
     }
+
+    /**
+     * Credits points to a loyalty card for a purchase.
+     *
+     * @param card   the loyalty card
+     * @param amount the purchase amount (after all discounts)
+     */
+    public void creditPointsForPurchase(final LoyaltyCard card,
+                                        final double amount) {
+        if (card != null && amount > 0) {
+            final double pointsEarned = calculatePointsEarned(amount);
+            card.addPoints(pointsEarned);
+        }
+    }
+
 }
+

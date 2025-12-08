@@ -1,51 +1,86 @@
 package dojo.supermarket.model;
 
-import dojo.supermarket.model.offer.OfferStrategy;
-import dojo.supermarket.model.offer.OfferStrategyFactory;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ShoppingCart {
+/**
+ * Represents a shopping cart with products.
+ */
+public final class ShoppingCart {
 
+    /**
+     * List of product quantities in the cart.
+     */
     private final List<ProductQuantity> items = new ArrayList<>();
+
+    /**
+     * Map of products to their total quantities.
+     */
     private final Map<Product, Double> productQuantities = new HashMap<>();
 
-    List<ProductQuantity> getItems() {
+    /**
+     * Gets all items in the cart.
+     *
+     * @return unmodifiable list of items
+     */
+    public List<ProductQuantity> getItems() {
         return Collections.unmodifiableList(items);
     }
 
-    void addItem(Product product) {
+    /**
+     * Adds a single item to the cart.
+     *
+     * @param product the product to add
+     */
+    public void addItem(final Product product) {
         addItemQuantity(product, 1.0);
     }
 
-    Map<Product, Double> productQuantities() {
+    /**
+     * Gets product quantities map.
+     *
+     * @return unmodifiable map of product quantities
+     */
+    public Map<Product, Double> productQuantities() {
         return Collections.unmodifiableMap(productQuantities);
     }
 
-    public void addItemQuantity(Product product, double quantity) {
+    /**
+     * Adds a product with specified quantity.
+     *
+     * @param product  the product to add
+     * @param quantity the quantity
+     */
+    public void addItemQuantity(final Product product,
+                                 final double quantity) {
         items.add(new ProductQuantity(product, quantity));
-        if (productQuantities.containsKey(product)) {
-            productQuantities.put(product, productQuantities.get(product) + quantity);
-        } else {
-            productQuantities.put(product, quantity);
-        }
+        productQuantities.merge(product, quantity, Double::sum);
     }
 
-    void handleOffers(Receipt receipt, Map<Product, Offer> offers, SupermarketCatalog catalog) {
-        for (Product p: productQuantities().keySet()) {
-            double quantity = productQuantities.get(p);
-            if (offers.containsKey(p)) {
-                Offer offer = offers.get(p);
-                double unitPrice = catalog.getUnitPrice(p);
+    /**
+     * Handles offer application for products in cart.
+     *
+     * @param receipt the receipt to add discounts to
+     * @param offers  available offers
+     * @param catalog the catalog for price lookup
+     */
+    void handleOffers(final Receipt receipt,
+                      final Map<Product, Offer> offers,
+                      final SupermarketCatalog catalog) {
+        for (Map.Entry<Product, Double> entry
+                : productQuantities.entrySet()) {
+            final Product product = entry.getKey();
+            final double quantity = entry.getValue();
 
-                // Use Strategy Pattern instead of if-else chain
-                OfferStrategy strategy = OfferStrategyFactory.getStrategy(offer.offerType);
-                Discount discount = strategy.calculateDiscount(p, quantity, unitPrice, offer.argument);
+            if (offers.containsKey(product)) {
+                final Offer offer = offers.get(product);
+                final double unitPrice = catalog.getUnitPrice(product);
 
+                final Discount discount =
+                        offer.calculateDiscount(quantity, unitPrice);
                 if (discount != null) {
                     receipt.addDiscount(discount);
                 }
