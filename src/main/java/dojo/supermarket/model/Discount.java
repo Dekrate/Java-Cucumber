@@ -1,5 +1,7 @@
 package dojo.supermarket.model;
 
+import java.math.BigDecimal;
+
 /**
  * Represents a discount applied to a product.
  *
@@ -8,5 +10,5 @@ package dojo.supermarket.model;
  * @param discountAmount the discount amount
  */
 public record Discount(Product product, String description,
-                       double discountAmount) {
+                       BigDecimal discountAmount) {
 }

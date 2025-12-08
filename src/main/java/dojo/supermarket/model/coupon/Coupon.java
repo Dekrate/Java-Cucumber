@@ -2,6 +2,7 @@ package dojo.supermarket.model.coupon;
 
 import dojo.supermarket.model.Product;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -12,49 +13,16 @@ import java.util.Objects;
  */
 public final class Coupon {
 
-    /**
-     * Maximum allowed discount percentage.
-     */
-    private static final double MAX_DISCOUNT_PERCENTAGE = 100.0;
+    private static final BigDecimal MAX_DISCOUNT_PERCENTAGE =
+            new BigDecimal("100.0");
 
-    /**
-     * Unique coupon code.
-     */
     private final String code;
-
-    /**
-     * Product this coupon applies to.
-     */
     private final Product product;
-
-    /**
-     * Minimum quantity required to activate coupon.
-     */
     private final int requiredQuantity;
-
-    /**
-     * Quantity that receives the discount.
-     */
     private final int discountedQuantity;
-
-    /**
-     * Discount percentage (0-100).
-     */
-    private final double discountPercentage;
-
-    /**
-     * Start date of validity.
-     */
+    private final BigDecimal discountPercentage;
     private final LocalDate validFrom;
-
-    /**
-     * End date of validity (inclusive).
-     */
     private final LocalDate validUntil;
-
-    /**
-     * Whether coupon has been redeemed.
-     */
     private boolean redeemed;
 
     /**
@@ -71,7 +39,7 @@ public final class Coupon {
     public Coupon(final String couponCode, final Product couponProduct,
                   final int reqQuantity,
                   final int discQuantity,
-                  final double discPercentage,
+                  final BigDecimal discPercentage,
                   final LocalDate validFromDate,
                   final LocalDate validUntilDate) {
         this.code = Objects.requireNonNull(couponCode,
@@ -80,7 +48,8 @@ public final class Coupon {
                 "Product cannot be null");
         this.requiredQuantity = reqQuantity;
         this.discountedQuantity = discQuantity;
-        this.discountPercentage = discPercentage;
+        this.discountPercentage = Objects.requireNonNull(discPercentage,
+                "Discount percentage cannot be null");
         this.validFrom = Objects.requireNonNull(validFromDate,
                 "Valid from date cannot be null");
         this.validUntil = Objects.requireNonNull(validUntilDate,
@@ -99,8 +68,8 @@ public final class Coupon {
             throw new IllegalArgumentException(
                     "Discounted quantity must be positive");
         }
-        if (discountPercentage < 0
-                || discountPercentage > MAX_DISCOUNT_PERCENTAGE) {
+        if (discountPercentage.compareTo(BigDecimal.ZERO) < 0
+                || discountPercentage.compareTo(MAX_DISCOUNT_PERCENTAGE) > 0) {
             throw new IllegalArgumentException(
                     "Discount percentage must be between 0 and 100");
         }
@@ -176,7 +145,7 @@ public final class Coupon {
      *
      * @return the discount percentage (0-100)
      */
-    public double getDiscountPercentage() {
+    public BigDecimal getDiscountPercentage() {
         return discountPercentage;
     }
 
@@ -201,7 +170,7 @@ public final class Coupon {
     /**
      * Checks if the coupon has been redeemed.
      *
-     * @return true if redeemed, false otherwise
+     * @return true if redeemed
      */
     public boolean isRedeemed() {
         return redeemed;
@@ -212,9 +181,10 @@ public final class Coupon {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Coupon coupon)) {
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
+        final Coupon coupon = (Coupon) o;
         return Objects.equals(code, coupon.code);
     }
 
@@ -225,11 +195,16 @@ public final class Coupon {
 
     @Override
     public String toString() {
-        return String.format(
-                "Coupon{code='%s', product=%s, %.0f%%%% off, "
-                        + "valid %s to %s, redeemed=%s}",
-                code, product.name(), discountPercentage,
-                validFrom, validUntil, redeemed);
+        return "Coupon{"
+                + "code='" + code + '\''
+                + ", product=" + product
+                + ", requiredQuantity=" + requiredQuantity
+                + ", discountedQuantity=" + discountedQuantity
+                + ", discountPercentage=" + discountPercentage
+                + ", validFrom=" + validFrom
+                + ", validUntil=" + validUntil
+                + ", redeemed=" + redeemed
+                + '}';
     }
 }
 

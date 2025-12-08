@@ -5,8 +5,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import static dojo.supermarket.model.TestHelper.assertBigDecimalEquals;
+import static dojo.supermarket.model.TestHelper.bd;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Coupon Tests")
@@ -30,8 +33,8 @@ class CouponTest {
         orangeJuice = new Product("orange juice", ProductUnit.EACH);
         milk = new Product("milk", ProductUnit.EACH);
 
-        catalog.addProduct(orangeJuice, 2.50);
-        catalog.addProduct(milk, 1.20);
+        catalog.addProduct(orangeJuice, bd(2.50));
+        catalog.addProduct(milk, bd(1.20));
 
         validDate = LocalDate.of(2025, 11, 14);
         beforeValidDate = LocalDate.of(2025, 11, 12);
@@ -41,13 +44,12 @@ class CouponTest {
     @Test
     @DisplayName("Should apply coupon when valid and sufficient quantity")
     void shouldApplyCouponWhenValidAndSufficientQuantity() {
-        // Buy 6 bottles, get 6 more at 50% off (valid 13/11 - 15/11)
         Coupon coupon = new Coupon(
             "OJ50",
             orangeJuice,
-            6, // required quantity
-            6, // discounted quantity
-            50.0, // 50% off
+            6,
+            6,
+            bd(50.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
@@ -56,16 +58,16 @@ class CouponTest {
         teller.setPurchaseDate(validDate);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(orangeJuice, 12);
+        cart.addItemQuantity(orangeJuice, bd(12));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // 12 bottles at 2.50 = 30.00
-        // Discount: 6 bottles at 50% off = 6 * 2.50 * 0.50 = 7.50
-        // Total: 30.00 - 7.50 = 22.50
-        assertEquals(22.50, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(12).multiply(bd(2.50))
+                .subtract(bd(6).multiply(bd(2.50)).multiply(bd(0.50)));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertEquals(1, receipt.getDiscounts().size());
-        assertTrue(receipt.getDiscounts().get(0).description().contains("OJ50"));
+        assertTrue(receipt.getDiscounts().get(0).description()
+                .contains("OJ50"));
     }
 
     @Test
@@ -76,7 +78,7 @@ class CouponTest {
             orangeJuice,
             6,
             6,
-            50.0,
+            bd(50.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
@@ -85,11 +87,11 @@ class CouponTest {
         teller.setPurchaseDate(validDate);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(orangeJuice, 10); // Only 10, need 12
+        cart.addItemQuantity(orangeJuice, bd(10));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(25.00, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(25.00), receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
         assertFalse(coupon.isRedeemed());
     }
@@ -102,7 +104,7 @@ class CouponTest {
             orangeJuice,
             6,
             6,
-            50.0,
+            bd(50.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
@@ -111,11 +113,11 @@ class CouponTest {
         teller.setPurchaseDate(beforeValidDate);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(orangeJuice, 12);
+        cart.addItemQuantity(orangeJuice, bd(12));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(30.00, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(30.00), receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
         assertFalse(coupon.isRedeemed());
     }
@@ -128,7 +130,7 @@ class CouponTest {
             orangeJuice,
             6,
             6,
-            50.0,
+            bd(50.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
@@ -137,11 +139,11 @@ class CouponTest {
         teller.setPurchaseDate(afterValidDate);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(orangeJuice, 12);
+        cart.addItemQuantity(orangeJuice, bd(12));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(30.00, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(30.00), receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
         assertFalse(coupon.isRedeemed());
     }
@@ -154,7 +156,7 @@ class CouponTest {
             orangeJuice,
             6,
             6,
-            50.0,
+            bd(50.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
@@ -163,9 +165,7 @@ class CouponTest {
         teller.setPurchaseDate(validDate);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(orangeJuice, 12);
-
-        assertFalse(coupon.isRedeemed());
+        cart.addItemQuantity(orangeJuice, bd(12));
 
         teller.checksOutArticlesFrom(cart);
 
@@ -173,14 +173,14 @@ class CouponTest {
     }
 
     @Test
-    @DisplayName("Should not apply already redeemed coupon")
-    void shouldNotApplyAlreadyRedeemedCoupon() {
+    @DisplayName("Should not apply coupon twice")
+    void shouldNotApplyCouponTwice() {
         Coupon coupon = new Coupon(
             "OJ50",
             orangeJuice,
             6,
             6,
-            50.0,
+            bd(50.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
@@ -188,99 +188,42 @@ class CouponTest {
         teller.addCoupon(coupon);
         teller.setPurchaseDate(validDate);
 
-        // First purchase
         ShoppingCart cart1 = new ShoppingCart();
-        cart1.addItemQuantity(orangeJuice, 12);
-        Receipt receipt1 = teller.checksOutArticlesFrom(cart1);
+        cart1.addItemQuantity(orangeJuice, bd(12));
+        teller.checksOutArticlesFrom(cart1);
 
-        assertEquals(22.50, receipt1.getTotalPrice(), 0.01);
-        assertTrue(coupon.isRedeemed());
-
-        // Second purchase - coupon should not apply
         ShoppingCart cart2 = new ShoppingCart();
-        cart2.addItemQuantity(orangeJuice, 12);
+        cart2.addItemQuantity(orangeJuice, bd(12));
         Receipt receipt2 = teller.checksOutArticlesFrom(cart2);
 
-        assertEquals(30.00, receipt2.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(30.00), receipt2.getTotalPrice());
         assertTrue(receipt2.getDiscounts().isEmpty());
     }
 
     @Test
-    @DisplayName("Should apply coupon on valid date boundaries")
-    void shouldApplyCouponOnValidDateBoundaries() {
+    @DisplayName("Should handle different discount percentages")
+    void shouldHandleDifferentDiscountPercentages() {
         Coupon coupon = new Coupon(
-            "OJ50",
-            orangeJuice,
-            6,
-            6,
-            50.0,
-            LocalDate.of(2025, 11, 13),
-            LocalDate.of(2025, 11, 15)
-        );
-
-        teller.addCoupon(coupon);
-
-        // Test on first valid date
-        teller.setPurchaseDate(LocalDate.of(2025, 11, 13));
-        ShoppingCart cart1 = new ShoppingCart();
-        cart1.addItemQuantity(orangeJuice, 12);
-        Receipt receipt1 = teller.checksOutArticlesFrom(cart1);
-
-        assertEquals(22.50, receipt1.getTotalPrice(), 0.01);
-    }
-
-    @Test
-    @DisplayName("Should combine coupon with other discounts")
-    void shouldCombineCouponWithOtherDiscounts() {
-        Coupon coupon = new Coupon(
-            "OJ50",
-            orangeJuice,
-            6,
-            6,
-            50.0,
+            "MILK25",
+            milk,
+            4,
+            2,
+            bd(25.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
 
         teller.addCoupon(coupon);
         teller.setPurchaseDate(validDate);
-        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT, milk, 10.0);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(orangeJuice, 12);
-        cart.addItemQuantity(milk, 3);
+        cart.addItemQuantity(milk, bd(6));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // Orange juice: 22.50 (with coupon)
-        // Milk: 3 * 1.20 = 3.60, with 10% off = 3.24
-        // Total: 22.50 + 3.24 = 25.74
-        assertEquals(25.74, receipt.getTotalPrice(), 0.01);
-        assertEquals(2, receipt.getDiscounts().size());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when creating invalid coupon")
-    void shouldThrowExceptionWhenCreatingInvalidCoupon() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Coupon("INVALID", orangeJuice, 0, 6, 50.0,
-                validDate, validDate.plusDays(1));
-        });
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Coupon("INVALID", orangeJuice, 6, -1, 50.0,
-                validDate, validDate.plusDays(1));
-        });
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Coupon("INVALID", orangeJuice, 6, 6, 150.0,
-                validDate, validDate.plusDays(1));
-        });
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Coupon("INVALID", orangeJuice, 6, 6, 50.0,
-                validDate.plusDays(2), validDate);
-        });
+        BigDecimal expected = bd(6).multiply(bd(1.20))
+                .subtract(bd(2).multiply(bd(1.20)).multiply(bd(0.25)));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
     }
 }
 

@@ -1,5 +1,6 @@
 package dojo.supermarket.model;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,13 +25,13 @@ public final class Receipt {
      *
      * @return total price
      */
-    public double getTotalPrice() {
-        double total = 0.0;
+    public BigDecimal getTotalPrice() {
+        BigDecimal total = BigDecimal.ZERO;
         for (ReceiptItem item : items) {
-            total += item.totalPrice();
+            total = total.add(item.totalPrice());
         }
         for (Discount discount : discounts) {
-            total += discount.discountAmount();
+            total = total.add(discount.discountAmount());
         }
         return total;
     }
@@ -43,8 +44,9 @@ public final class Receipt {
      * @param price      the unit price
      * @param totalPrice the total price for this product
      */
-    public void addProduct(final Product product, final double quantity,
-                           final double price, final double totalPrice) {
+    public void addProduct(final Product product, final BigDecimal quantity,
+                           final BigDecimal price,
+                           final BigDecimal totalPrice) {
         items.add(new ReceiptItem(product, quantity, price, totalPrice));
     }
 

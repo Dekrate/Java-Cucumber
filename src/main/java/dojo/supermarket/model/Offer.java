@@ -3,29 +3,16 @@ package dojo.supermarket.model;
 import dojo.supermarket.model.offer.DiscountStrategy;
 import dojo.supermarket.model.offer.DiscountStrategyFactory;
 
+import java.math.BigDecimal;
+
 /**
  * Represents a special offer on a product.
  */
 public final class Offer {
 
-    /**
-     * The offer type.
-     */
     private final SpecialOfferType offerType;
-
-    /**
-     * The product.
-     */
     private final Product product;
-
-    /**
-     * The offer argument.
-     */
-    private final double argument;
-
-    /**
-     * The discount strategy.
-     */
+    private final BigDecimal argument;
     private final DiscountStrategy strategy;
 
     /**
@@ -37,7 +24,7 @@ public final class Offer {
      */
     public Offer(final SpecialOfferType type,
                  final Product prod,
-                 final double arg) {
+                 final BigDecimal arg) {
         this.offerType = type;
         this.argument = arg;
         this.product = prod;
@@ -51,8 +38,8 @@ public final class Offer {
      * @param unitPrice the unit price
      * @return discount object
      */
-    public Discount calculateDiscount(final double quantity,
-                                       final double unitPrice) {
+    public Discount calculateDiscount(final BigDecimal quantity,
+                                       final BigDecimal unitPrice) {
         return strategy.calculateDiscount(product, quantity,
                 unitPrice, argument);
     }
@@ -80,7 +67,7 @@ public final class Offer {
      *
      * @return the offer argument
      */
-    public double getArgument() {
+    public BigDecimal getArgument() {
         return argument;
     }
 
@@ -93,3 +80,4 @@ public final class Offer {
         return strategy;
     }
 }
+

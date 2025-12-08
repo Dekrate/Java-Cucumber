@@ -7,6 +7,7 @@ import dojo.supermarket.model.coupon.CouponManager;
 import dojo.supermarket.model.loyalty.LoyaltyCard;
 import dojo.supermarket.model.loyalty.LoyaltyProgramManager;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,41 +20,14 @@ import java.util.Map;
  */
 public class Teller {
 
-    /**
-     * The supermarket catalog for price lookup.
-     */
     private final SupermarketCatalog catalog;
-
-    /**
-     * Map of products to their special offers.
-     */
     private final Map<Product, Offer> offers = new HashMap<>();
-
-    /**
-     * List of product bundles for discount consideration.
-     */
     private final List<ProductBundle> bundles = new ArrayList<>();
-
-    /**
-     * Calculator for bundle discounts.
-     */
     private final BundleDiscountCalculator bundleCalculator =
             new BundleDiscountCalculator();
-
-    /**
-     * Manager for coupon discounts.
-     */
     private final CouponManager couponManager = new CouponManager();
-
-    /**
-     * Manager for loyalty program.
-     */
     private final LoyaltyProgramManager loyaltyManager =
             new LoyaltyProgramManager();
-
-    /**
-     * The purchase date for coupon validity checks.
-     */
     private LocalDate purchaseDate = LocalDate.now();
 
     /**
@@ -74,7 +48,7 @@ public class Teller {
      */
     public void addSpecialOffer(final SpecialOfferType offerType,
                                 final Product product,
-                                final double argument) {
+                                final BigDecimal argument) {
         offers.put(product, new Offer(offerType, product, argument));
     }
 
@@ -104,7 +78,7 @@ public class Teller {
      * @return receipt with all items and discounts
      */
     public Receipt checksOutArticlesFrom(final ShoppingCart theCart) {
-        return checksOutArticlesFrom(theCart, null, 0.0);
+        return checksOutArticlesFrom(theCart, null, BigDecimal.ZERO);
     }
 
     /**
@@ -119,20 +93,20 @@ public class Teller {
      */
     public Receipt checksOutArticlesFrom(final ShoppingCart theCart,
                                          final LoyaltyCard loyaltyCard,
-                                         final double pointsToUse) {
+                                         final BigDecimal pointsToUse) {
         final Receipt receipt = new Receipt();
         final List<ProductQuantity> productQuantities =
                 theCart.getItems();
 
         for (ProductQuantity pq: productQuantities) {
             final Product p = pq.product();
-            final double quantity = pq.quantity();
-            final double unitPrice = catalog.getUnitPrice(p);
-            final double price = quantity * unitPrice;
+            final BigDecimal quantity = pq.quantity();
+            final BigDecimal unitPrice = catalog.getUnitPrice(p);
+            final BigDecimal price = quantity.multiply(unitPrice);
             receipt.addProduct(p, quantity, unitPrice, price);
         }
 
-        final Map<Product, Double> remainingQuantities =
+        final Map<Product, BigDecimal> remainingQuantities =
                 new HashMap<>(theCart.productQuantities());
 
         for (ProductBundle bundle : bundles) {
@@ -152,9 +126,10 @@ public class Teller {
 
         theCart.handleOffers(receipt, offers, catalog);
 
-        final double totalBeforeLoyalty = receipt.getTotalPrice();
+        final BigDecimal totalBeforeLoyalty = receipt.getTotalPrice();
 
-        if (loyaltyCard != null && pointsToUse > 0) {
+        if (loyaltyCard != null
+                && pointsToUse.compareTo(BigDecimal.ZERO) > 0) {
             final Discount loyaltyDiscount =
                     loyaltyManager.applyLoyaltyPoints(
                             loyaltyCard, totalBeforeLoyalty, pointsToUse);
@@ -164,7 +139,7 @@ public class Teller {
         }
 
         if (loyaltyCard != null) {
-            final double finalTotal = receipt.getTotalPrice();
+            final BigDecimal finalTotal = receipt.getTotalPrice();
             loyaltyManager.creditPointsForPurchase(loyaltyCard,
                     finalTotal);
         }
@@ -180,4 +155,14 @@ public class Teller {
     public void setPurchaseDate(final LocalDate date) {
         this.purchaseDate = date;
     }
+
+    /**
+     * Gets the loyalty program manager.
+     *
+     * @return the loyalty program manager
+     */
+    public LoyaltyProgramManager getLoyaltyManager() {
+        return loyaltyManager;
+    }
 }
+

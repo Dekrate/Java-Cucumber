@@ -7,10 +7,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
+import static dojo.supermarket.model.TestHelper.assertBigDecimalEquals;
+import static dojo.supermarket.model.TestHelper.bd;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Integration Tests - Multiple Discount Types")
@@ -34,16 +37,15 @@ class IntegrationTest {
         apples = new Product("apples", ProductUnit.KILO);
         orangeJuice = new Product("orange juice", ProductUnit.EACH);
 
-        catalog.addProduct(toothbrush, 0.99);
-        catalog.addProduct(toothpaste, 1.79);
-        catalog.addProduct(apples, 1.99);
-        catalog.addProduct(orangeJuice, 2.50);
+        catalog.addProduct(toothbrush, bd(0.99));
+        catalog.addProduct(toothpaste, bd(1.79));
+        catalog.addProduct(apples, bd(1.99));
+        catalog.addProduct(orangeJuice, bd(2.50));
     }
 
     @Test
     @DisplayName("Should apply all discount types together")
     void shouldApplyAllDiscountTypesTogether() {
-        // Setup bundle discount
         Map<Product, Integer> bundleProducts = new HashMap<>();
         bundleProducts.put(toothbrush, 1);
         bundleProducts.put(toothpaste, 1);
@@ -51,53 +53,49 @@ class IntegrationTest {
                 "Dental Care Bundle", bundleProducts);
         teller.addProductBundle(bundle);
 
-        // Setup coupon
         Coupon coupon = new Coupon(
             "OJ50",
             orangeJuice,
             6,
             6,
-            50.0,
+            bd(50.0),
             LocalDate.of(2025, 11, 13),
             LocalDate.of(2025, 11, 15)
         );
         teller.addCoupon(coupon);
         teller.setPurchaseDate(LocalDate.of(2025, 11, 14));
 
-        // Setup regular offer
-        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT, apples, 20.0);
+        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT,
+                apples, bd(20.0));
 
-        // Setup loyalty card
-        LoyaltyCard card = new LoyaltyCard("LC123456", 100.0);
+        LoyaltyCard card = new LoyaltyCard("LC123456", bd(100.0));
 
-        // Create cart with all products
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, 1);  // Part of bundle
-        cart.addItemQuantity(toothpaste, 1);  // Part of bundle
-        cart.addItemQuantity(orangeJuice, 12); // Coupon applies
-        cart.addItemQuantity(apples, 2.0);     // Regular discount
+        cart.addItemQuantity(toothbrush, bd(1));
+        cart.addItemQuantity(toothpaste, bd(1));
+        cart.addItemQuantity(orangeJuice, bd(12));
+        cart.addItemQuantity(apples, bd(2.0));
 
-        // Checkout with loyalty points
-        Receipt receipt = teller.checksOutArticlesFrom(cart, card, 50.0);
+        Receipt receipt = teller.checksOutArticlesFrom(cart, card, bd(50.0));
 
-        // Verify multiple discounts applied
-        assertTrue(receipt.getDiscounts().size() >= 3, "Should have at least 3 discounts");
+        assertTrue(receipt.getDiscounts().size() >= 3,
+                "Should have at least 3 discounts");
 
-        // Verify loyalty points earned
-        assertTrue(card.getPoints() > 50.0, "Should have earned points");
+        assertTrue(card.getPoints().compareTo(bd(50.0)) > 0,
+                "Should have earned points");
 
-        // Total should be less than original price due to all discounts
-        double originalTotal = 0.99 + 1.79 + (12 * 2.50) + (2.0 * 1.99);
-        assertTrue(receipt.getTotalPrice() < originalTotal);
+        BigDecimal originalTotal = bd(0.99).add(bd(1.79))
+                .add(bd(12).multiply(bd(2.50)))
+                .add(bd(2.0).multiply(bd(1.99)));
+        assertTrue(receipt.getTotalPrice().compareTo(originalTotal) < 0);
     }
 
     @Test
     @DisplayName("Should handle complex shopping scenario")
     void shouldHandleComplexShoppingScenario() {
-        // 3-for-2 on toothbrush
-        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO, toothbrush, 0);
+        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO,
+                toothbrush, bd(0));
 
-        // Bundle discount
         Map<Product, Integer> bundleProducts = new HashMap<>();
         bundleProducts.put(toothbrush, 2);
         bundleProducts.put(toothpaste, 2);
@@ -106,14 +104,14 @@ class IntegrationTest {
         teller.addProductBundle(bundle);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, 5);
-        cart.addItemQuantity(toothpaste, 3);
+        cart.addItemQuantity(toothbrush, bd(5));
+        cart.addItemQuantity(toothpaste, bd(3));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
         assertNotNull(receipt);
         assertTrue(receipt.getDiscounts().size() > 0);
-        assertTrue(receipt.getTotalPrice() > 0);
+        assertTrue(receipt.getTotalPrice().compareTo(BigDecimal.ZERO) > 0);
     }
 
     @Test
@@ -124,7 +122,7 @@ class IntegrationTest {
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(0.99, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(0.99), receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
         assertEquals(1, receipt.getItems().size());
     }
@@ -132,16 +130,18 @@ class IntegrationTest {
     @Test
     @DisplayName("Should calculate correct totals with fractional quantities")
     void shouldCalculateCorrectTotalsWithFractionalQuantities() {
-        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT, apples, 15.0);
+        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT,
+                apples, bd(15.0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(apples, 2.5);
-        cart.addItemQuantity(apples, 1.5);
+        cart.addItemQuantity(apples, bd(2.5));
+        cart.addItemQuantity(apples, bd(1.5));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // 4.0 kg at 1.99 = 7.96, with 15% off = 6.766
-        assertEquals(6.766, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(4.0).multiply(bd(1.99))
+                .multiply(bd(0.85));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
     }
 
     @Test
@@ -152,7 +152,7 @@ class IntegrationTest {
             orangeJuice,
             6,
             6,
-            50.0,
+            bd(50.0),
             LocalDate.of(2025, 11, 1),
             LocalDate.of(2025, 11, 5)
         );
@@ -161,12 +161,11 @@ class IntegrationTest {
         teller.setPurchaseDate(LocalDate.of(2025, 11, 10));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(orangeJuice, 12);
+        cart.addItemQuantity(orangeJuice, bd(12));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // Coupon should not apply
-        assertEquals(30.0, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(30.0), receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
     }
 
@@ -176,12 +175,12 @@ class IntegrationTest {
         LoyaltyCard card = new LoyaltyCard("LC123");
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, 1);
+        cart.addItemQuantity(toothbrush, bd(1));
 
-        Receipt receipt = teller.checksOutArticlesFrom(cart, card, 0.0);
+        Receipt receipt = teller.checksOutArticlesFrom(cart, card, bd(0.0));
 
-        assertEquals(0.99, receipt.getTotalPrice(), 0.01);
-        assertEquals(0.99, card.getPoints(), 0.01);
+        assertBigDecimalEquals(bd(0.99), receipt.getTotalPrice());
+        assertBigDecimalEquals(bd(0.99), card.getPoints());
     }
 }
 

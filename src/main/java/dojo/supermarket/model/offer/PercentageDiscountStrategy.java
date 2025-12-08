@@ -3,23 +3,29 @@ package dojo.supermarket.model.offer;
 import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 public final class PercentageDiscountStrategy
         implements DiscountStrategy {
 
-    /** Divisor to convert percentage to decimal. */
-    private static final double PERCENTAGE_DIVISOR = 100.0;
+    private static final BigDecimal PERCENTAGE_DIVISOR =
+            new BigDecimal("100");
+    private static final int SCALE = 2;
 
     @Override
     public Discount calculateDiscount(final Product product,
-                                       final double quantity,
-                                       final double unitPrice,
-                                       final double argument) {
-        final double totalPrice = quantity * unitPrice;
-        final double discountAmount =
-                totalPrice * argument / PERCENTAGE_DIVISOR;
+                                       final BigDecimal quantity,
+                                       final BigDecimal unitPrice,
+                                       final BigDecimal argument) {
+        final BigDecimal totalPrice = quantity.multiply(unitPrice);
+        final BigDecimal discountAmount = totalPrice
+                .multiply(argument)
+                .divide(PERCENTAGE_DIVISOR, SCALE, RoundingMode.HALF_UP);
 
         return new Discount(product,
-                String.format("%.0f%% off", argument),
-                -discountAmount);
+                String.format("%s%% off", argument.stripTrailingZeros()
+                        .toPlainString()),
+                discountAmount.negate());
     }
 }

@@ -6,6 +6,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.math.BigDecimal;
+
+import static dojo.supermarket.model.TestHelper.assertBigDecimalEquals;
+import static dojo.supermarket.model.TestHelper.bd;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Teller Tests")
@@ -25,48 +29,46 @@ class TellerTest {
         catalog = new FakeCatalog();
         teller = new Teller(catalog);
 
-        // Setup products
         toothbrush = new Product("toothbrush", ProductUnit.EACH);
         apples = new Product("apples", ProductUnit.KILO);
         rice = new Product("rice", ProductUnit.EACH);
         toothpaste = new Product("toothpaste", ProductUnit.EACH);
         cherryTomatoes = new Product("cherry tomatoes", ProductUnit.EACH);
 
-        // Add to catalog
-        catalog.addProduct(toothbrush, 0.99);
-        catalog.addProduct(apples, 1.99);
-        catalog.addProduct(rice, 2.49);
-        catalog.addProduct(toothpaste, 1.79);
-        catalog.addProduct(cherryTomatoes, 0.69);
+        catalog.addProduct(toothbrush, bd(0.99));
+        catalog.addProduct(apples, bd(1.99));
+        catalog.addProduct(rice, bd(2.49));
+        catalog.addProduct(toothpaste, bd(1.79));
+        catalog.addProduct(cherryTomatoes, bd(0.69));
     }
 
     @Test
     @DisplayName("Should calculate total without any discounts")
     void shouldCalculateTotalWithoutDiscounts() {
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(apples, 2.5);
-        cart.addItemQuantity(toothbrush, 1);
+        cart.addItemQuantity(apples, bd(2.5));
+        cart.addItemQuantity(toothbrush, bd(1));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 2.5 * 1.99 + 0.99;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2.5).multiply(bd(1.99)).add(bd(0.99));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
     }
 
     @Test
     @DisplayName("Should apply three for two discount")
     void shouldApplyThreeForTwoDiscount() {
-        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO, toothbrush, 0);
+        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO,
+                toothbrush, bd(0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, 3);
+        cart.addItemQuantity(toothbrush, bd(3));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // Pay for 2, get 3
-        double expected = 2 * 0.99;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2).multiply(bd(0.99));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertEquals(1, receipt.getDiscounts().size());
         assertEquals("3 for 2", receipt.getDiscounts().get(0).description());
     }
@@ -74,134 +76,145 @@ class TellerTest {
     @Test
     @DisplayName("Should apply three for two discount multiple times")
     void shouldApplyThreeForTwoDiscountMultipleTimes() {
-        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO, toothbrush, 0);
+        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO,
+                toothbrush, bd(0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, 7);
+        cart.addItemQuantity(toothbrush, bd(7));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // 7 items: 2 sets of 3-for-2 (pay for 4) + 1 regular (pay for 1) = pay for 5
-        double expected = 5 * 0.99;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(5).multiply(bd(0.99));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
     }
 
     @Test
     @DisplayName("Should apply ten percent discount")
     void shouldApplyTenPercentDiscount() {
-        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT, rice, 10.0);
+        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT,
+                rice, bd(10.0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(rice, 2);
+        cart.addItemQuantity(rice, bd(2));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 2 * 2.49 * 0.9; // 10% off
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2).multiply(bd(2.49))
+                .multiply(bd(0.9));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertEquals(1, receipt.getDiscounts().size());
     }
 
     @Test
     @DisplayName("Should apply twenty percent discount on apples")
     void shouldApplyTwentyPercentDiscount() {
-        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT, apples, 20.0);
+        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT,
+                apples, bd(20.0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(apples, 2.5);
+        cart.addItemQuantity(apples, bd(2.5));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 2.5 * 1.99 * 0.8; // 20% off
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2.5).multiply(bd(1.99))
+                .multiply(bd(0.8));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
     }
 
     @Test
     @DisplayName("Should apply two for amount discount")
     void shouldApplyTwoForAmountDiscount() {
-        teller.addSpecialOffer(SpecialOfferType.TWO_FOR_AMOUNT, cherryTomatoes, 0.99);
+        teller.addSpecialOffer(SpecialOfferType.TWO_FOR_AMOUNT,
+                cherryTomatoes, bd(0.99));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(cherryTomatoes, 2);
+        cart.addItemQuantity(cherryTomatoes, bd(2));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(0.99, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(0.99), receipt.getTotalPrice());
         assertEquals(1, receipt.getDiscounts().size());
     }
 
     @Test
     @DisplayName("Should apply two for amount discount with odd quantity")
     void shouldApplyTwoForAmountDiscountOddQuantity() {
-        teller.addSpecialOffer(SpecialOfferType.TWO_FOR_AMOUNT, cherryTomatoes, 0.99);
+        teller.addSpecialOffer(SpecialOfferType.TWO_FOR_AMOUNT,
+                cherryTomatoes, bd(0.99));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(cherryTomatoes, 5);
+        cart.addItemQuantity(cherryTomatoes, bd(5));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // 5 items: 2 sets of 2 (2*0.99) + 1 regular (0.69)
-        double expected = 2 * 0.99 + 0.69;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2).multiply(bd(0.99)).add(bd(0.69));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
     }
 
     @Test
     @DisplayName("Should apply five for amount discount")
     void shouldApplyFiveForAmountDiscount() {
-        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT, toothpaste, 7.49);
+        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT,
+                toothpaste, bd(7.49));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothpaste, 5);
+        cart.addItemQuantity(toothpaste, bd(5));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(7.49, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(7.49), receipt.getTotalPrice());
         assertEquals(1, receipt.getDiscounts().size());
     }
 
     @Test
     @DisplayName("Should not apply five for amount discount when quantity is less than 5")
     void shouldNotApplyFiveForAmountDiscountWhenInsufficientQuantity() {
-        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT, toothpaste, 7.49);
+        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT,
+                toothpaste, bd(7.49));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothpaste, 4);
+        cart.addItemQuantity(toothpaste, bd(4));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 4 * 1.79;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(4).multiply(bd(1.79));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
     }
 
     @Test
     @DisplayName("Should apply five for amount discount multiple times")
     void shouldApplyFiveForAmountDiscountMultipleTimes() {
-        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT, toothpaste, 7.49);
+        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT,
+                toothpaste, bd(7.49));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothpaste, 12);
+        cart.addItemQuantity(toothpaste, bd(12));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        // 12 items: 2 sets of 5 (2*7.49) + 2 regular (2*1.79)
-        double expected = 2 * 7.49 + 2 * 1.79;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2).multiply(bd(7.49))
+                .add(bd(2).multiply(bd(1.79)));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
     }
 
     @Test
     @DisplayName("Should apply multiple different discounts")
     void shouldApplyMultipleDifferentDiscounts() {
-        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO, toothbrush, 0);
-        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT, rice, 10.0);
+        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO,
+                toothbrush, bd(0));
+        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT,
+                rice, bd(10.0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, 3);
-        cart.addItemQuantity(rice, 2);
+        cart.addItemQuantity(toothbrush, bd(3));
+        cart.addItemQuantity(rice, bd(2));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 2 * 0.99 + 2 * 2.49 * 0.9;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2).multiply(bd(0.99))
+                .add(bd(2).multiply(bd(2.49)).multiply(bd(0.9)));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertEquals(2, receipt.getDiscounts().size());
     }
 
@@ -215,15 +228,17 @@ class TellerTest {
         "6, 3.96"
     })
     @DisplayName("Should correctly calculate three for two with various quantities")
-    void shouldCorrectlyCalculateThreeForTwo(int quantity, double expectedTotal) {
-        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO, toothbrush, 0);
+    void shouldCorrectlyCalculateThreeForTwo(final int quantity,
+                                             final double expectedTotal) {
+        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO,
+                toothbrush, bd(0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, quantity);
+        cart.addItemQuantity(toothbrush, bd(quantity));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(expectedTotal, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(bd(expectedTotal), receipt.getTotalPrice());
     }
 
     @Test
@@ -233,7 +248,7 @@ class TellerTest {
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        assertEquals(0.0, receipt.getTotalPrice(), 0.01);
+        assertBigDecimalEquals(BigDecimal.ZERO, receipt.getTotalPrice());
         assertTrue(receipt.getItems().isEmpty());
         assertTrue(receipt.getDiscounts().isEmpty());
     }
@@ -242,8 +257,8 @@ class TellerTest {
     @DisplayName("Should calculate correct receipt items")
     void shouldCalculateCorrectReceiptItems() {
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(apples, 2.0);
-        cart.addItemQuantity(toothbrush, 1.0);
+        cart.addItemQuantity(apples, bd(2.0));
+        cart.addItemQuantity(toothbrush, bd(1.0));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
@@ -254,68 +269,73 @@ class TellerTest {
             .findFirst()
             .orElseThrow();
 
-        assertEquals(2.0, applesItem.quantity(), 0.01);
-        assertEquals(1.99, applesItem.price(), 0.01);
-        assertEquals(3.98, applesItem.totalPrice(), 0.01);
+        assertBigDecimalEquals(bd(2.0), applesItem.quantity());
+        assertBigDecimalEquals(bd(1.99), applesItem.price());
+        assertBigDecimalEquals(bd(3.98), applesItem.totalPrice());
     }
 
     @Test
     @DisplayName("Should not apply three for two discount for non-whole quantities")
     void shouldNotApplyThreeForTwoDiscountForNonWholeQuantities() {
-        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO, toothbrush, 0);
+        teller.addSpecialOffer(SpecialOfferType.THREE_FOR_TWO,
+                toothbrush, bd(0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothbrush, 3.5);
+        cart.addItemQuantity(toothbrush, bd(3.5));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 3.5 * 0.99;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(3.5).multiply(bd(0.99));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
     }
 
     @Test
     @DisplayName("Should not apply two for amount discount for non-whole quantities")
     void shouldNotApplyTwoForAmountDiscountForNonWholeQuantities() {
-        teller.addSpecialOffer(SpecialOfferType.TWO_FOR_AMOUNT, cherryTomatoes, 0.99);
+        teller.addSpecialOffer(SpecialOfferType.TWO_FOR_AMOUNT,
+                cherryTomatoes, bd(0.99));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(cherryTomatoes, 2.3);
+        cart.addItemQuantity(cherryTomatoes, bd(2.3));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 2.3 * 0.69;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2.3).multiply(bd(0.69));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
     }
 
     @Test
     @DisplayName("Should not apply five for amount discount for non-whole quantities")
     void shouldNotApplyFiveForAmountDiscountForNonWholeQuantities() {
-        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT, toothpaste, 7.49);
+        teller.addSpecialOffer(SpecialOfferType.FIVE_FOR_AMOUNT,
+                toothpaste, bd(7.49));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(toothpaste, 5.7);
+        cart.addItemQuantity(toothpaste, bd(5.7));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 5.7 * 1.79;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(5.7).multiply(bd(1.79));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertTrue(receipt.getDiscounts().isEmpty());
     }
 
     @Test
     @DisplayName("Should apply percentage discount for non-whole quantities")
     void shouldApplyPercentageDiscountForNonWholeQuantities() {
-        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT, apples, 20.0);
+        teller.addSpecialOffer(SpecialOfferType.TEN_PERCENT_DISCOUNT,
+                apples, bd(20.0));
 
         ShoppingCart cart = new ShoppingCart();
-        cart.addItemQuantity(apples, 2.5);
+        cart.addItemQuantity(apples, bd(2.5));
 
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
-        double expected = 2.5 * 1.99 * 0.8;
-        assertEquals(expected, receipt.getTotalPrice(), 0.01);
+        BigDecimal expected = bd(2.5).multiply(bd(1.99))
+                .multiply(bd(0.8));
+        assertBigDecimalEquals(expected, receipt.getTotalPrice());
         assertEquals(1, receipt.getDiscounts().size());
     }
 }

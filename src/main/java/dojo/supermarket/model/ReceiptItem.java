@@ -1,5 +1,7 @@
 package dojo.supermarket.model;
 
+import java.math.BigDecimal;
+
 /**
  * Represents an item on a receipt.
  *
@@ -8,6 +10,6 @@ package dojo.supermarket.model;
  * @param price      the unit price
  * @param totalPrice the total price
  */
-public record ReceiptItem(Product product, double quantity,
-                          double price, double totalPrice) {
+public record ReceiptItem(Product product, BigDecimal quantity,
+                          BigDecimal price, BigDecimal totalPrice) {
 }

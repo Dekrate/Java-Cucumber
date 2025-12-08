@@ -1,5 +1,7 @@
 package dojo.supermarket.model;
 
+import java.math.BigDecimal;
+
 /**
  * Catalog interface for product prices.
  */
@@ -11,7 +13,7 @@ public interface SupermarketCatalog {
      * @param product the product
      * @param price   the price
      */
-    void addProduct(Product product, double price);
+    void addProduct(Product product, BigDecimal price);
 
     /**
      * Gets the unit price for a product.
@@ -19,5 +21,5 @@ public interface SupermarketCatalog {
      * @param product the product
      * @return unit price
      */
-    double getUnitPrice(Product product);
+    BigDecimal getUnitPrice(Product product);
 }

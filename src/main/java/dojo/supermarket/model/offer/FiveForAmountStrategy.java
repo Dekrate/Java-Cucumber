@@ -3,23 +3,22 @@ package dojo.supermarket.model.offer;
 import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 
+import java.math.BigDecimal;
+
 public final class FiveForAmountStrategy implements DiscountStrategy {
 
-    /** Number of items required in a set. */
     private static final int ITEMS_IN_SET = 5;
-    /** Epsilon for floating point comparison. */
-    private static final double EPSILON = 0.0001;
 
     @Override
     public Discount calculateDiscount(final Product product,
-                                       final double quantity,
-                                       final double unitPrice,
-                                       final double argument) {
+                                       final BigDecimal quantity,
+                                       final BigDecimal unitPrice,
+                                       final BigDecimal argument) {
         if (!isWholeNumber(quantity)) {
             return null;
         }
 
-        final int quantityAsInt = (int) Math.round(quantity);
+        final int quantityAsInt = quantity.intValue();
 
         if (quantityAsInt < ITEMS_IN_SET) {
             return null;
@@ -28,17 +27,20 @@ public final class FiveForAmountStrategy implements DiscountStrategy {
         final int numberOfSets = quantityAsInt / ITEMS_IN_SET;
         final int remainder = quantityAsInt % ITEMS_IN_SET;
 
-        final double totalWithDiscount =
-                (numberOfSets * argument) + (remainder * unitPrice);
-        final double discountAmount =
-                quantity * unitPrice - totalWithDiscount;
+        final BigDecimal totalWithDiscount = argument
+                .multiply(BigDecimal.valueOf(numberOfSets))
+                .add(unitPrice.multiply(BigDecimal.valueOf(remainder)));
+
+        final BigDecimal discountAmount = quantity.multiply(unitPrice)
+                .subtract(totalWithDiscount);
 
         return new Discount(product,
-                String.format("%d for %.2f", ITEMS_IN_SET, argument),
-                -discountAmount);
+                String.format("%d for %s", ITEMS_IN_SET,
+                        argument.toPlainString()),
+                discountAmount.negate());
     }
 
-    private boolean isWholeNumber(final double value) {
-        return Math.abs(value - Math.round(value)) < EPSILON;
+    private boolean isWholeNumber(final BigDecimal value) {
+        return value.stripTrailingZeros().scale() <= 0;
     }
 }

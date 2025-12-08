@@ -4,6 +4,8 @@ import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 import dojo.supermarket.model.SupermarketCatalog;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,14 +17,10 @@ import java.util.Map;
  */
 public class CouponManager {
 
-    /**
-     * Divisor to convert percentage to decimal.
-     */
-    private static final double PERCENTAGE_DIVISOR = 100.0;
+    private static final BigDecimal PERCENTAGE_DIVISOR =
+            new BigDecimal("100");
+    private static final int SCALE = 2;
 
-    /**
-     * List of available coupons.
-     */
     private final List<Coupon> availableCoupons = new ArrayList<>();
 
     /**
@@ -43,7 +41,7 @@ public class CouponManager {
      * @return list of applicable discounts
      */
     public List<Discount> applyCoupons(
-            final Map<Product, Double> productQuantities,
+            final Map<Product, BigDecimal> productQuantities,
             final SupermarketCatalog catalog,
             final LocalDate purchaseDate) {
         final List<Discount> discounts = new ArrayList<>();
@@ -72,32 +70,34 @@ public class CouponManager {
      */
     private Discount tryApplyCoupon(
             final Coupon coupon,
-            final Map<Product, Double> productQuantities,
+            final Map<Product, BigDecimal> productQuantities,
             final SupermarketCatalog catalog) {
         final Product product = coupon.getProduct();
-        final double availableQuantity =
-                productQuantities.getOrDefault(product, 0.0);
+        final BigDecimal availableQuantity =
+                productQuantities.getOrDefault(product, BigDecimal.ZERO);
 
         final int totalRequired = coupon.getRequiredQuantity()
                 + coupon.getDiscountedQuantity();
-        if (availableQuantity < totalRequired) {
+        if (availableQuantity.compareTo(
+                BigDecimal.valueOf(totalRequired)) < 0) {
             return null;
         }
 
-        final double unitPrice = catalog.getUnitPrice(product);
-        final double discountAmount = unitPrice
-                * coupon.getDiscountedQuantity()
-                * coupon.getDiscountPercentage()
-                / PERCENTAGE_DIVISOR;
+        final BigDecimal unitPrice = catalog.getUnitPrice(product);
+        final BigDecimal discountAmount = unitPrice
+                .multiply(BigDecimal.valueOf(coupon.getDiscountedQuantity()))
+                .multiply(coupon.getDiscountPercentage())
+                .divide(PERCENTAGE_DIVISOR, SCALE, RoundingMode.HALF_UP);
 
         final String description = String.format(
-                "Coupon %s: Buy %d get %d at %.0f%% off",
+                "Coupon %s: Buy %d get %d at %s%% off",
                 coupon.getCode(),
                 coupon.getRequiredQuantity(),
                 coupon.getDiscountedQuantity(),
-                coupon.getDiscountPercentage());
+                coupon.getDiscountPercentage().stripTrailingZeros()
+                        .toPlainString());
 
-        return new Discount(product, description, -discountAmount);
+        return new Discount(product, description, discountAmount.negate());
     }
 
     /**
@@ -119,13 +119,12 @@ public class CouponManager {
     }
 
     /**
-     * Removes expired coupons based on the given date.
+     * Checks if the manager has any available coupons.
      *
-     * @param currentDate the current date
+     * @return true if there are available coupons
      */
-    public void removeExpiredCoupons(final LocalDate currentDate) {
-        availableCoupons.removeIf(coupon ->
-            currentDate.isAfter(coupon.getValidUntil()));
+    public boolean hasAvailableCoupons() {
+        return availableCoupons.stream().anyMatch(c -> !c.isRedeemed());
     }
 }
 

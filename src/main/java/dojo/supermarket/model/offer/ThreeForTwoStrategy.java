@@ -3,33 +3,24 @@ package dojo.supermarket.model.offer;
 import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 public final class ThreeForTwoStrategy implements DiscountStrategy {
 
-    /**
-     * Number of items required for the offer.
-     */
     private static final int ITEMS_TO_BUY = 3;
-
-    /**
-     * Number of items to pay for in the offer.
-     */
     private static final int ITEMS_TO_PAY = 2;
-
-    /**
-     * Epsilon for floating-point comparisons.
-     */
-    private static final double EPSILON = 0.0001;
 
     @Override
     public Discount calculateDiscount(final Product product,
-                                       final double quantity,
-                                       final double unitPrice,
-                                       final double argument) {
+                                       final BigDecimal quantity,
+                                       final BigDecimal unitPrice,
+                                       final BigDecimal argument) {
         if (!isWholeNumber(quantity)) {
             return null;
         }
 
-        final int quantityAsInt = (int) Math.round(quantity);
+        final int quantityAsInt = quantity.intValue();
 
         if (quantityAsInt < ITEMS_TO_BUY) {
             return null;
@@ -38,16 +29,18 @@ public final class ThreeForTwoStrategy implements DiscountStrategy {
         final int numberOfSets = quantityAsInt / ITEMS_TO_BUY;
         final int remainder = quantityAsInt % ITEMS_TO_BUY;
 
-        final double totalWithDiscount =
-                (numberOfSets * ITEMS_TO_PAY * unitPrice)
-                        + (remainder * unitPrice);
-        final double discountAmount =
-                quantity * unitPrice - totalWithDiscount;
+        final BigDecimal totalWithDiscount = BigDecimal.valueOf(numberOfSets)
+                .multiply(BigDecimal.valueOf(ITEMS_TO_PAY))
+                .multiply(unitPrice)
+                .add(BigDecimal.valueOf(remainder).multiply(unitPrice));
 
-        return new Discount(product, "3 for 2", -discountAmount);
+        final BigDecimal discountAmount = quantity.multiply(unitPrice)
+                .subtract(totalWithDiscount);
+
+        return new Discount(product, "3 for 2", discountAmount.negate());
     }
 
-    private boolean isWholeNumber(final double value) {
-        return Math.abs(value - Math.round(value)) < EPSILON;
+    private boolean isWholeNumber(final BigDecimal value) {
+        return value.stripTrailingZeros().scale() <= 0;
     }
 }

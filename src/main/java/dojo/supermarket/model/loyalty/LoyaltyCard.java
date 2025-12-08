@@ -1,5 +1,6 @@
 package dojo.supermarket.model.loyalty;
 
+import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
@@ -8,15 +9,8 @@ import java.util.Objects;
  */
 public final class LoyaltyCard {
 
-    /**
-     * The card number.
-     */
-    private final String cardNumber;
-
-    /**
-     * The points balance.
-     */
-    private double points;
+	private final String cardNumber;
+	private BigDecimal points;
 
     /**
      * Creates a loyalty card with zero points.
@@ -24,7 +18,7 @@ public final class LoyaltyCard {
      * @param cardNum the card number
      */
     public LoyaltyCard(final String cardNum) {
-        this(cardNum, 0.0);
+        this(cardNum, BigDecimal.ZERO);
     }
 
     /**
@@ -34,12 +28,13 @@ public final class LoyaltyCard {
      * @param initialPoints the initial points balance
      */
     public LoyaltyCard(final String cardNum,
-                       final double initialPoints) {
+                       final BigDecimal initialPoints) {
         this.cardNumber = Objects.requireNonNull(cardNum,
                 "Card number cannot be null");
-        this.points = initialPoints;
+        this.points = Objects.requireNonNull(initialPoints,
+                "Initial points cannot be null");
 
-        if (initialPoints < 0) {
+        if (initialPoints.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(
                     "Initial points cannot be negative");
         }
@@ -50,12 +45,12 @@ public final class LoyaltyCard {
      *
      * @param pointsToAdd the points to add
      */
-    public void addPoints(final double pointsToAdd) {
-        if (pointsToAdd < 0) {
+    public void addPoints(final BigDecimal pointsToAdd) {
+        if (pointsToAdd.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(
                     "Cannot add negative points");
         }
-        this.points += pointsToAdd;
+        this.points = this.points.add(pointsToAdd);
     }
 
     /**
@@ -64,15 +59,15 @@ public final class LoyaltyCard {
      * @param pointsToUse the points to deduct
      * @return true if successful, false if insufficient points
      */
-    public boolean usePoints(final double pointsToUse) {
-        if (pointsToUse < 0) {
+    public boolean usePoints(final BigDecimal pointsToUse) {
+        if (pointsToUse.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(
                     "Cannot use negative points");
         }
-        if (pointsToUse > this.points) {
+        if (pointsToUse.compareTo(this.points) > 0) {
             return false;
         }
-        this.points -= pointsToUse;
+        this.points = this.points.subtract(pointsToUse);
         return true;
     }
 
@@ -90,7 +85,7 @@ public final class LoyaltyCard {
      *
      * @return the points balance
      */
-    public double getPoints() {
+    public BigDecimal getPoints() {
         return points;
     }
 
@@ -99,9 +94,10 @@ public final class LoyaltyCard {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof LoyaltyCard that)) {
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
+        final LoyaltyCard that = (LoyaltyCard) o;
         return Objects.equals(cardNumber, that.cardNumber);
     }
 
@@ -112,9 +108,10 @@ public final class LoyaltyCard {
 
     @Override
     public String toString() {
-        return String.format(
-                "LoyaltyCard{cardNumber='%s', points=%.2f}",
-                cardNumber, points);
+        return "LoyaltyCard{"
+                + "cardNumber='" + cardNumber + '\''
+                + ", points=" + points
+                + '}';
     }
 }
 

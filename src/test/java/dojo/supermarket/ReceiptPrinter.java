@@ -1,7 +1,11 @@
 package dojo.supermarket;
 
-import dojo.supermarket.model.*;
+import dojo.supermarket.model.Discount;
+import dojo.supermarket.model.ProductUnit;
+import dojo.supermarket.model.Receipt;
+import dojo.supermarket.model.ReceiptItem;
 
+import java.math.BigDecimal;
 import java.util.Locale;
 
 public class ReceiptPrinter {
@@ -12,18 +16,18 @@ public class ReceiptPrinter {
         this(40);
     }
 
-    public ReceiptPrinter(int columns) {
+    public ReceiptPrinter(final int columns) {
         this.columns = columns;
     }
 
-    public String printReceipt(Receipt receipt) {
-        StringBuilder result = new StringBuilder();
+    public String printReceipt(final Receipt receipt) {
+        final StringBuilder result = new StringBuilder();
         for (ReceiptItem item : receipt.getItems()) {
-            String receiptItem = presentReceiptItem(item);
+            final String receiptItem = presentReceiptItem(item);
             result.append(receiptItem);
         }
         for (Discount discount : receipt.getDiscounts()) {
-            String discountPresentation = presentDiscount(discount);
+            final String discountPresentation = presentDiscount(discount);
             result.append(discountPresentation);
         }
 
@@ -32,35 +36,40 @@ public class ReceiptPrinter {
         return result.toString();
     }
 
-    private String presentReceiptItem(ReceiptItem item) {
-        String totalPricePresentation = presentPrice(item.totalPrice());
-        String name = item.product().name();
+    private String presentReceiptItem(final ReceiptItem item) {
+        final String totalPricePresentation =
+                presentPrice(item.totalPrice());
+        final String name = item.product().name();
 
         String line = formatLineWithWhitespace(name, totalPricePresentation);
 
-        if (item.quantity() != 1) {
-            line += "  " + presentPrice(item.price()) + " * " + presentQuantity(item) + "\n";
+        if (item.quantity().compareTo(BigDecimal.ONE) != 0) {
+            line += "  " + presentPrice(item.price()) + " * "
+                    + presentQuantity(item) + "\n";
         }
         return line;
     }
 
-    private String presentDiscount(Discount discount) {
-        String name = discount.description() + "(" + discount.product().name() + ")";
-        String value = presentPrice(discount.discountAmount());
+    private String presentDiscount(final Discount discount) {
+        final String name = discount.description()
+                + "(" + discount.product().name() + ")";
+        final String value = presentPrice(discount.discountAmount());
 
         return formatLineWithWhitespace(name, value);
     }
 
-    private String presentTotal(Receipt receipt) {
-        String name = "Total: ";
-        String value = presentPrice(receipt.getTotalPrice());
+    private String presentTotal(final Receipt receipt) {
+        final String name = "Total: ";
+        final String value = presentPrice(receipt.getTotalPrice());
         return formatLineWithWhitespace(name, value);
     }
 
-    private String formatLineWithWhitespace(String name, String value) {
-        StringBuilder line = new StringBuilder();
+    private String formatLineWithWhitespace(final String name,
+                                            final String value) {
+        final StringBuilder line = new StringBuilder();
         line.append(name);
-        int whitespaceSize = this.columns - name.length() - value.length();
+        final int whitespaceSize = this.columns - name.length()
+                - value.length();
         for (int i = 0; i < whitespaceSize; i++) {
             line.append(" ");
         }
@@ -69,13 +78,14 @@ public class ReceiptPrinter {
         return line.toString();
     }
 
-    private static String presentPrice(double price) {
+    private static String presentPrice(final BigDecimal price) {
         return String.format(Locale.UK, "%.2f", price);
     }
 
-    private static String presentQuantity(ReceiptItem item) {
+    private static String presentQuantity(final ReceiptItem item) {
         return ProductUnit.EACH.equals(item.product().unit())
-                ? String.format("%d", (int)item.quantity())
+                ? String.format("%d", item.quantity().intValue())
                 : String.format(Locale.UK, "%.3f", item.quantity());
     }
 }
+

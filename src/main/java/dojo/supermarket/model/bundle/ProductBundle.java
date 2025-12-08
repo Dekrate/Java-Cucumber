@@ -2,6 +2,7 @@ package dojo.supermarket.model.bundle;
 
 import dojo.supermarket.model.Product;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,27 +11,15 @@ import java.util.Objects;
 /**
  * Represents a bundle of products for discount.
  * Implements Value Object pattern - immutable and compared by value.
- *
- * @param name               -- GETTER --
- *                           Gets the bundle name.
- * @param requiredProducts   -- GETTER --
- *                           Gets required products and quantities.
- * @param discountPercentage -- GETTER --
- *                           Gets the discount percentage.
  */
 public record ProductBundle(String name,
                             Map<Product, Integer> requiredProducts,
-                            double discountPercentage) {
+                            BigDecimal discountPercentage) {
 
-    /**
-     * Default bundle discount percentage.
-     */
-    private static final double BUNDLE_DISCOUNT_PERCENTAGE = 10.0;
-
-    /**
-     * Maximum discount percentage.
-     */
-    private static final double MAX_DISCOUNT_PERCENTAGE = 100.0;
+	private static final BigDecimal BUNDLE_DISCOUNT_PERCENTAGE =
+			new BigDecimal("10.0");
+	private static final BigDecimal MAX_DISCOUNT_PERCENTAGE =
+			new BigDecimal("100.0");
 
     /**
      * Compact constructor with validation.
@@ -40,13 +29,15 @@ public record ProductBundle(String name,
         requiredProducts = Collections.unmodifiableMap(
                 new HashMap<>(Objects.requireNonNull(requiredProducts,
                         "Required products cannot be null")));
+        discountPercentage = Objects.requireNonNull(discountPercentage,
+                "Discount percentage cannot be null");
 
         if (requiredProducts.isEmpty()) {
             throw new IllegalArgumentException(
                     "Bundle must contain at least one product");
         }
-        if (discountPercentage < 0
-                || discountPercentage > MAX_DISCOUNT_PERCENTAGE) {
+        if (discountPercentage.compareTo(BigDecimal.ZERO) < 0
+                || discountPercentage.compareTo(MAX_DISCOUNT_PERCENTAGE) > 0) {
             throw new IllegalArgumentException(
                     "Discount percentage must be between 0 and 100");
         }
@@ -55,8 +46,8 @@ public record ProductBundle(String name,
     /**
      * Creates a product bundle with default 10% discount.
      *
-     * @param bundleName       the bundle name
-     * @param products         map of products to quantities
+     * @param bundleName the bundle name
+     * @param products   map of products to quantities
      * @return new ProductBundle with default discount
      */
     public static ProductBundle withDefaultDiscount(
@@ -74,8 +65,7 @@ public record ProductBundle(String name,
         if (!(o instanceof ProductBundle that)) {
             return false;
         }
-        return Double.compare(that.discountPercentage,
-                discountPercentage) == 0
+        return discountPercentage.compareTo(that.discountPercentage) == 0
                 && Objects.equals(name, that.name)
                 && Objects.equals(requiredProducts, that.requiredProducts);
     }
@@ -87,9 +77,11 @@ public record ProductBundle(String name,
 
     @Override
     public String toString() {
-        return String.format(
-                "ProductBundle{name='%s', discount=%.1f%%%%}",
-                name, discountPercentage);
+        return "ProductBundle{"
+                + "name='" + name + '\''
+                + ", requiredProducts=" + requiredProducts
+                + ", discountPercentage=" + discountPercentage
+                + '}';
     }
 }
 

@@ -4,27 +4,23 @@ import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 import dojo.supermarket.model.ProductUnit;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 /**
  * Manages loyalty program functionality.
  * Implements Service pattern for loyalty-related business logic.
- *
- * @param pointsPerCurrencyUnit -- GETTER --
- *                              Gets points per currency unit.
- * @param currencyPerPoint      -- GETTER --
- *                              Gets currency per point.
  */
-public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
-                                    double currencyPerPoint) {
+public record LoyaltyProgramManager(BigDecimal pointsPerCurrencyUnit,
+                                    BigDecimal currencyPerPoint) {
 
-    /**
-     * Default points per currency unit.
-     */
-    private static final double DEFAULT_POINTS_PER_CURRENCY_UNIT = 1.0;
+	private static final BigDecimal DEFAULT_POINTS_PER_CURRENCY_UNIT =
+			BigDecimal.ONE;
 
-    /**
-     * Default currency per point.
-     */
-    private static final double DEFAULT_CURRENCY_PER_POINT = 0.01;
+	private static final BigDecimal DEFAULT_CURRENCY_PER_POINT =
+			new BigDecimal("0.01");
+
+	private static final int SCALE = 2;
 
     /**
      * Creates a loyalty program manager with default rates.
@@ -35,26 +31,18 @@ public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
     }
 
     /**
-     * Creates a loyalty program manager with custom rates.
-     *
-     * @param pointsPerCurrencyUnit points earned per currency unit
-     * @param currencyPerPoint      currency value of one point
-     */
-    public LoyaltyProgramManager {
-    }
-
-    /**
      * Calculates points earned from a purchase amount.
      *
      * @param amount the purchase amount
      * @return points earned
      */
-    public double calculatePointsEarned(final double amount) {
-        if (amount < 0) {
+    public BigDecimal calculatePointsEarned(final BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(
                     "Amount cannot be negative");
         }
-        return amount * pointsPerCurrencyUnit;
+        return amount.multiply(pointsPerCurrencyUnit)
+                .setScale(SCALE, RoundingMode.HALF_UP);
     }
 
     /**
@@ -63,12 +51,13 @@ public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
      * @param points the points to convert
      * @return currency value
      */
-    public double convertPointsToCurrency(final double points) {
-        if (points < 0) {
+    public BigDecimal convertPointsToCurrency(final BigDecimal points) {
+        if (points.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(
                     "Points cannot be negative");
         }
-        return points * currencyPerPoint;
+        return points.multiply(currencyPerPoint)
+                .setScale(SCALE, RoundingMode.HALF_UP);
     }
 
     /**
@@ -80,21 +69,23 @@ public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
      * @return Discount object if successful, null otherwise
      */
     public Discount applyLoyaltyPoints(final LoyaltyCard card,
-                                       final double totalAmount,
-                                       final double pointsToUse) {
+                                       final BigDecimal totalAmount,
+                                       final BigDecimal pointsToUse) {
         if (card == null) {
             return null;
         }
 
-        if (pointsToUse <= 0) {
+        if (pointsToUse.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
 
-        final double maxPoints = totalAmount / currencyPerPoint;
-        final double actualPointsToUse = Math.min(pointsToUse,
-                Math.min(maxPoints, card.getPoints()));
+        final BigDecimal maxPoints = totalAmount
+                .divide(currencyPerPoint, SCALE, RoundingMode.HALF_UP);
+        final BigDecimal actualPointsToUse = pointsToUse
+                .min(maxPoints)
+                .min(card.getPoints());
 
-        if (actualPointsToUse <= 0) {
+        if (actualPointsToUse.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
 
@@ -102,7 +93,7 @@ public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
             return null;
         }
 
-        final double discountAmount =
+        final BigDecimal discountAmount =
                 convertPointsToCurrency(actualPointsToUse);
 
         final Product loyaltyProduct = new Product(
@@ -110,10 +101,11 @@ public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
                 ProductUnit.EACH);
 
         final String description = String.format(
-                "Loyalty Points (%.0f points)", actualPointsToUse);
+                "Loyalty Points (%s points)",
+                actualPointsToUse.stripTrailingZeros().toPlainString());
 
         return new Discount(loyaltyProduct, description,
-                -discountAmount);
+                discountAmount.negate());
     }
 
     /**
@@ -123,12 +115,11 @@ public record LoyaltyProgramManager(double pointsPerCurrencyUnit,
      * @param amount the purchase amount (after all discounts)
      */
     public void creditPointsForPurchase(final LoyaltyCard card,
-                                        final double amount) {
-        if (card != null && amount > 0) {
-            final double pointsEarned = calculatePointsEarned(amount);
+                                        final BigDecimal amount) {
+        if (card != null && amount.compareTo(BigDecimal.ZERO) > 0) {
+            final BigDecimal pointsEarned = calculatePointsEarned(amount);
             card.addPoints(pointsEarned);
         }
     }
-
 }
 

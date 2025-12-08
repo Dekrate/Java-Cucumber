@@ -4,6 +4,8 @@ import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 import dojo.supermarket.model.SupermarketCatalog;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 
 /**
@@ -12,8 +14,9 @@ import java.util.Map;
  */
 public final class BundleDiscountCalculator {
 
-    /** Divisor to convert percentage to decimal. */
-    private static final double PERCENTAGE_DIVISOR = 100.0;
+    private static final BigDecimal PERCENTAGE_DIVISOR =
+            new BigDecimal("100");
+    private static final int SCALE = 2;
 
     /**
      * Calculates the bundle discount for purchased products.
@@ -26,7 +29,7 @@ public final class BundleDiscountCalculator {
      */
     public Discount calculateBundleDiscount(
             final ProductBundle bundle,
-            final Map<Product, Double> productQuantities,
+            final Map<Product, BigDecimal> productQuantities,
             final SupermarketCatalog catalog) {
         final int completeBundles =
                 countCompleteBundles(bundle, productQuantities);
@@ -35,16 +38,20 @@ public final class BundleDiscountCalculator {
             return null;
         }
 
-        final double bundlePrice = calculateBundlePrice(bundle, catalog);
-        final double discountAmount = bundlePrice
-                * bundle.discountPercentage() / PERCENTAGE_DIVISOR
-                * completeBundles;
+        final BigDecimal bundlePrice = calculateBundlePrice(bundle, catalog);
+        final BigDecimal discountAmount = bundlePrice
+                .multiply(bundle.discountPercentage())
+                .divide(PERCENTAGE_DIVISOR, SCALE, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(completeBundles));
 
         final Product bundleProduct = createBundleProduct(bundle);
-        final String description = String.format("%s (%.0f%% off)",
-                bundle.name(), bundle.discountPercentage());
+        final String description = String.format("%s (%s%% off)",
+                bundle.name(),
+                bundle.discountPercentage().stripTrailingZeros()
+                        .toPlainString());
 
-        return new Discount(bundleProduct, description, -discountAmount);
+        return new Discount(bundleProduct, description,
+                discountAmount.negate());
     }
 
     /**
@@ -56,7 +63,7 @@ public final class BundleDiscountCalculator {
      */
     private int countCompleteBundles(
             final ProductBundle bundle,
-            final Map<Product, Double> productQuantities) {
+            final Map<Product, BigDecimal> productQuantities) {
         int minBundles = Integer.MAX_VALUE;
 
         for (Map.Entry<Product, Integer> entry
@@ -64,10 +71,10 @@ public final class BundleDiscountCalculator {
             final Product product = entry.getKey();
             final int requiredQuantity = entry.getValue();
 
-            final double availableQuantity =
-                    productQuantities.getOrDefault(product, 0.0);
+            final BigDecimal availableQuantity =
+                    productQuantities.getOrDefault(product, BigDecimal.ZERO);
             final int possibleBundles =
-                    (int) (availableQuantity / requiredQuantity);
+                    availableQuantity.intValue() / requiredQuantity;
 
             minBundles = Math.min(minBundles, possibleBundles);
         }
@@ -82,17 +89,18 @@ public final class BundleDiscountCalculator {
      * @param catalog the catalog for price lookup
      * @return total price of the bundle
      */
-    private double calculateBundlePrice(final ProductBundle bundle,
-                                        final SupermarketCatalog catalog) {
-        double totalPrice = 0.0;
+    private BigDecimal calculateBundlePrice(final ProductBundle bundle,
+                                            final SupermarketCatalog catalog) {
+        BigDecimal totalPrice = BigDecimal.ZERO;
 
         for (Map.Entry<Product, Integer> entry
                 : bundle.requiredProducts().entrySet()) {
             final Product product = entry.getKey();
             final int quantity = entry.getValue();
-            final double unitPrice = catalog.getUnitPrice(product);
+            final BigDecimal unitPrice = catalog.getUnitPrice(product);
 
-            totalPrice += unitPrice * quantity;
+            totalPrice = totalPrice.add(
+                    unitPrice.multiply(BigDecimal.valueOf(quantity)));
         }
 
         return totalPrice;
@@ -108,6 +116,5 @@ public final class BundleDiscountCalculator {
         return new Product("Bundle: " + bundle.name(),
                           dojo.supermarket.model.ProductUnit.EACH);
     }
-
 }
 

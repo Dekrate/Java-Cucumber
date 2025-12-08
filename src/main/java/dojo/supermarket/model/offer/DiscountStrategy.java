@@ -3,6 +3,8 @@ package dojo.supermarket.model.offer;
 import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 
+import java.math.BigDecimal;
+
 /**
  * Strategy interface for calculating discounts.
  */
@@ -17,7 +19,7 @@ public interface DiscountStrategy {
      * @return discount or null if not applicable
      */
     Discount calculateDiscount(Product product,
-                               double quantity,
-                               double unitPrice,
-                               double argument);
+                               BigDecimal quantity,
+                               BigDecimal unitPrice,
+                               BigDecimal argument);
 }

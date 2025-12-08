@@ -1,5 +1,6 @@
 package dojo.supermarket.model;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,15 +12,9 @@ import java.util.Map;
  */
 public final class ShoppingCart {
 
-    /**
-     * List of product quantities in the cart.
-     */
     private final List<ProductQuantity> items = new ArrayList<>();
-
-    /**
-     * Map of products to their total quantities.
-     */
-    private final Map<Product, Double> productQuantities = new HashMap<>();
+    private final Map<Product, BigDecimal> productQuantities =
+            new HashMap<>();
 
     /**
      * Gets all items in the cart.
@@ -36,7 +31,7 @@ public final class ShoppingCart {
      * @param product the product to add
      */
     public void addItem(final Product product) {
-        addItemQuantity(product, 1.0);
+        addItemQuantity(product, BigDecimal.ONE);
     }
 
     /**
@@ -44,7 +39,7 @@ public final class ShoppingCart {
      *
      * @return unmodifiable map of product quantities
      */
-    public Map<Product, Double> productQuantities() {
+    public Map<Product, BigDecimal> productQuantities() {
         return Collections.unmodifiableMap(productQuantities);
     }
 
@@ -55,9 +50,9 @@ public final class ShoppingCart {
      * @param quantity the quantity
      */
     public void addItemQuantity(final Product product,
-                                 final double quantity) {
+                                 final BigDecimal quantity) {
         items.add(new ProductQuantity(product, quantity));
-        productQuantities.merge(product, quantity, Double::sum);
+        productQuantities.merge(product, quantity, BigDecimal::add);
     }
 
     /**
@@ -70,14 +65,14 @@ public final class ShoppingCart {
     void handleOffers(final Receipt receipt,
                       final Map<Product, Offer> offers,
                       final SupermarketCatalog catalog) {
-        for (Map.Entry<Product, Double> entry
+        for (Map.Entry<Product, BigDecimal> entry
                 : productQuantities.entrySet()) {
             final Product product = entry.getKey();
-            final double quantity = entry.getValue();
+            final BigDecimal quantity = entry.getValue();
 
             if (offers.containsKey(product)) {
                 final Offer offer = offers.get(product);
-                final double unitPrice = catalog.getUnitPrice(product);
+                final BigDecimal unitPrice = catalog.getUnitPrice(product);
 
                 final Discount discount =
                         offer.calculateDiscount(quantity, unitPrice);
@@ -88,3 +83,4 @@ public final class ShoppingCart {
         }
     }
 }
+
