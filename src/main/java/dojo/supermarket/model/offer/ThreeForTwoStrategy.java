@@ -4,11 +4,13 @@ import dojo.supermarket.model.Discount;
 import dojo.supermarket.model.Product;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
-public final class ThreeForTwoStrategy implements DiscountStrategy {
+public final class ThreeForTwoStrategy
+        extends AbstractWholeNumberDiscountStrategy {
 
+    /** Number of items to buy for the offer. */
     private static final int ITEMS_TO_BUY = 3;
+    /** Number of items to pay for. */
     private static final int ITEMS_TO_PAY = 2;
 
     @Override
@@ -16,31 +18,14 @@ public final class ThreeForTwoStrategy implements DiscountStrategy {
                                        final BigDecimal quantity,
                                        final BigDecimal unitPrice,
                                        final BigDecimal argument) {
-        if (!isWholeNumber(quantity)) {
-            return null;
-        }
-
-        final int quantityAsInt = quantity.intValue();
-
-        if (quantityAsInt < ITEMS_TO_BUY) {
-            return null;
-        }
-
-        final int numberOfSets = quantityAsInt / ITEMS_TO_BUY;
-        final int remainder = quantityAsInt % ITEMS_TO_BUY;
-
-        final BigDecimal totalWithDiscount = BigDecimal.valueOf(numberOfSets)
-                .multiply(BigDecimal.valueOf(ITEMS_TO_PAY))
-                .multiply(unitPrice)
-                .add(BigDecimal.valueOf(remainder).multiply(unitPrice));
-
-        final BigDecimal discountAmount = quantity.multiply(unitPrice)
-                .subtract(totalWithDiscount);
-
-        return new Discount(product, "3 for 2", discountAmount.negate());
-    }
-
-    private boolean isWholeNumber(final BigDecimal value) {
-        return value.stripTrailingZeros().scale() <= 0;
+        return calculateSetBasedDiscount(
+                product,
+                quantity,
+                unitPrice,
+                ITEMS_TO_BUY,
+                (sets, price) ->
+                        price.multiply(BigDecimal.valueOf(sets * ITEMS_TO_PAY)),
+                "3 for 2"
+        );
     }
 }

@@ -6,11 +6,12 @@ import dojo.supermarket.model.Product;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-public final class PercentageDiscountStrategy
-        implements DiscountStrategy {
+public final class PercentageDiscountStrategy implements DiscountStrategy {
 
+    /** Divisor for percentage calculations. */
     private static final BigDecimal PERCENTAGE_DIVISOR =
             new BigDecimal("100");
+    /** Scale for BigDecimal rounding operations. */
     private static final int SCALE = 2;
 
     @Override

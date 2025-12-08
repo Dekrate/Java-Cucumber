@@ -19,8 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Integration Tests - Multiple Discount Types")
 class IntegrationTest {
 
-    private SupermarketCatalog catalog;
-    private Teller teller;
+	private Teller teller;
 
     private Product toothbrush;
     private Product toothpaste;
@@ -29,7 +28,7 @@ class IntegrationTest {
 
     @BeforeEach
     void setUp() {
-        catalog = new FakeCatalog();
+	    SupermarketCatalog catalog = new FakeCatalog();
         teller = new Teller(catalog);
 
         toothbrush = new Product("toothbrush", ProductUnit.EACH);
@@ -110,7 +109,7 @@ class IntegrationTest {
         Receipt receipt = teller.checksOutArticlesFrom(cart);
 
         assertNotNull(receipt);
-        assertTrue(receipt.getDiscounts().size() > 0);
+	    assertFalse(receipt.getDiscounts().isEmpty());
         assertTrue(receipt.getTotalPrice().compareTo(BigDecimal.ZERO) > 0);
     }
 

@@ -10,9 +10,13 @@ import java.math.BigDecimal;
  */
 public final class Offer {
 
+    /** The type of special offer. */
     private final SpecialOfferType offerType;
+    /** The product this offer applies to. */
     private final Product product;
+    /** The argument for the offer calculation. */
     private final BigDecimal argument;
+    /** The discount strategy to use. */
     private final DiscountStrategy strategy;
 
     /**

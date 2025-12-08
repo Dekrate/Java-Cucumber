@@ -9,8 +9,10 @@ import java.util.Objects;
  */
 public final class LoyaltyCard {
 
-	private final String cardNumber;
-	private BigDecimal points;
+    /** The card number. */
+    private final String cardNumber;
+    /** The current points balance. */
+    private BigDecimal points;
 
     /**
      * Creates a loyalty card with zero points.
@@ -69,15 +71,6 @@ public final class LoyaltyCard {
         }
         this.points = this.points.subtract(pointsToUse);
         return true;
-    }
-
-    /**
-     * Gets the card number.
-     *
-     * @return the card number
-     */
-    public String getCardNumber() {
-        return cardNumber;
     }
 
     /**

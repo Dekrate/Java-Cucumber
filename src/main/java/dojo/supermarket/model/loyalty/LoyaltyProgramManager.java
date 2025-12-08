@@ -10,17 +10,23 @@ import java.math.RoundingMode;
 /**
  * Manages loyalty program functionality.
  * Implements Service pattern for loyalty-related business logic.
+ *
+ * @param pointsPerCurrencyUnit points earned per currency unit spent
+ * @param currencyPerPoint currency value per loyalty point
  */
 public record LoyaltyProgramManager(BigDecimal pointsPerCurrencyUnit,
                                     BigDecimal currencyPerPoint) {
 
-	private static final BigDecimal DEFAULT_POINTS_PER_CURRENCY_UNIT =
-			BigDecimal.ONE;
+    /** Default points earned per currency unit. */
+    private static final BigDecimal DEFAULT_POINTS_PER_CURRENCY_UNIT =
+            BigDecimal.ONE;
 
-	private static final BigDecimal DEFAULT_CURRENCY_PER_POINT =
-			new BigDecimal("0.01");
+    /** Default currency value per point. */
+    private static final BigDecimal DEFAULT_CURRENCY_PER_POINT =
+            new BigDecimal("0.01");
 
-	private static final int SCALE = 2;
+    /** Scale for BigDecimal rounding operations. */
+    private static final int SCALE = 2;
 
     /**
      * Creates a loyalty program manager with default rates.
@@ -89,9 +95,7 @@ public record LoyaltyProgramManager(BigDecimal pointsPerCurrencyUnit,
             return null;
         }
 
-        if (!card.usePoints(actualPointsToUse)) {
-            return null;
-        }
+        card.usePoints(actualPointsToUse);
 
         final BigDecimal discountAmount =
                 convertPointsToCurrency(actualPointsToUse);

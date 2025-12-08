@@ -3,33 +3,36 @@ package dojo.supermarket.model.bundle;
 import dojo.supermarket.model.Product;
 
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 /**
  * Represents a bundle of products for discount.
  * Implements Value Object pattern - immutable and compared by value.
+ *
+ * @param name the bundle name
+ * @param requiredProducts map of products and their required quantities
+ * @param discountPercentage the discount percentage for the bundle
  */
 public record ProductBundle(String name,
                             Map<Product, Integer> requiredProducts,
                             BigDecimal discountPercentage) {
 
-	private static final BigDecimal BUNDLE_DISCOUNT_PERCENTAGE =
-			new BigDecimal("10.0");
-	private static final BigDecimal MAX_DISCOUNT_PERCENTAGE =
-			new BigDecimal("100.0");
+    /** Default discount percentage for bundles. */
+    private static final BigDecimal BUNDLE_DISCOUNT_PERCENTAGE =
+            new BigDecimal("10.0");
+    /** Maximum allowed discount percentage. */
+    private static final BigDecimal MAX_DISCOUNT_PERCENTAGE =
+            new BigDecimal("100.0");
 
     /**
      * Compact constructor with validation.
      */
     public ProductBundle {
-        name = Objects.requireNonNull(name, "Bundle name cannot be null");
-        requiredProducts = Collections.unmodifiableMap(
-                new HashMap<>(Objects.requireNonNull(requiredProducts,
-                        "Required products cannot be null")));
-        discountPercentage = Objects.requireNonNull(discountPercentage,
+        Objects.requireNonNull(name, "Bundle name cannot be null");
+        Objects.requireNonNull(requiredProducts,
+                "Required products cannot be null");
+        Objects.requireNonNull(discountPercentage,
                 "Discount percentage cannot be null");
 
         if (requiredProducts.isEmpty()) {
@@ -41,6 +44,8 @@ public record ProductBundle(String name,
             throw new IllegalArgumentException(
                     "Discount percentage must be between 0 and 100");
         }
+
+        requiredProducts = Map.copyOf(requiredProducts);
     }
 
     /**
@@ -62,12 +67,15 @@ public record ProductBundle(String name,
         if (this == o) {
             return true;
         }
-        if (!(o instanceof ProductBundle that)) {
+        if (!(o instanceof ProductBundle(
+                String name1,
+                Map<Product, Integer> products,
+                BigDecimal percentage))) {
             return false;
         }
-        return discountPercentage.compareTo(that.discountPercentage) == 0
-                && Objects.equals(name, that.name)
-                && Objects.equals(requiredProducts, that.requiredProducts);
+        return discountPercentage.compareTo(percentage) == 0
+                && Objects.equals(name, name1)
+                && Objects.equals(requiredProducts, products);
     }
 
     @Override

@@ -4,8 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
-
 import static dojo.supermarket.model.TestHelper.assertBigDecimalEquals;
 import static dojo.supermarket.model.TestHelper.bd;
 import static org.junit.jupiter.api.Assertions.*;
@@ -63,21 +61,21 @@ class ShoppingCartTest {
     @Test
     @DisplayName("Should return unmodifiable items list")
     void shouldReturnUnmodifiableItemsList() {
-        cart.addItemQuantity(apple, bd(2.5));
+        final var quantity = bd(2.5);
+        cart.addItemQuantity(apple, quantity);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            cart.getItems().clear();
-        });
+        final var items = cart.getItems();
+        assertThrows(UnsupportedOperationException.class, items::clear);
     }
 
     @Test
     @DisplayName("Should return unmodifiable product quantities map")
     void shouldReturnUnmodifiableProductQuantitiesMap() {
-        cart.addItemQuantity(apple, bd(2.5));
+        final var quantity = bd(2.5);
+        cart.addItemQuantity(apple, quantity);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            cart.productQuantities().clear();
-        });
+        final var quantities = cart.productQuantities();
+        assertThrows(UnsupportedOperationException.class, quantities::clear);
     }
 }
 

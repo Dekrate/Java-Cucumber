@@ -20,14 +20,21 @@ import java.util.Map;
  */
 public class Teller {
 
+    /** The supermarket catalog for price lookups. */
     private final SupermarketCatalog catalog;
+    /** Map of products to their special offers. */
     private final Map<Product, Offer> offers = new HashMap<>();
+    /** List of available product bundles. */
     private final List<ProductBundle> bundles = new ArrayList<>();
+    /** Calculator for bundle discounts. */
     private final BundleDiscountCalculator bundleCalculator =
             new BundleDiscountCalculator();
+    /** Manager for coupon-based discounts. */
     private final CouponManager couponManager = new CouponManager();
+    /** Manager for loyalty program operations. */
     private final LoyaltyProgramManager loyaltyManager =
             new LoyaltyProgramManager();
+    /** The current purchase date for coupon validation. */
     private LocalDate purchaseDate = LocalDate.now();
 
     /**

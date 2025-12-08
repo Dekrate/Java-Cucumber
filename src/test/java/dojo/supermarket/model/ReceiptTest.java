@@ -63,17 +63,19 @@ class ReceiptTest {
         receipt.addProduct(apple, bd(2.0), bd(1.99), bd(3.98));
 
         assertEquals(1, receipt.getItems().size());
-        assertEquals(apple, receipt.getItems().get(0).product());
+        assertEquals(apple, receipt.getItems().getFirst().product());
     }
 
     @Test
     @DisplayName("Should return unmodifiable items list")
     void shouldReturnUnmodifiableItemsList() {
-        receipt.addProduct(apple, bd(2.0), bd(1.99), bd(3.98));
+        final BigDecimal quantity = bd(2.0);
+        final BigDecimal price = bd(1.99);
+        final BigDecimal total = bd(3.98);
+        receipt.addProduct(apple, quantity, price, total);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            receipt.getItems().clear();
-        });
+        final var items = receipt.getItems();
+        assertThrows(UnsupportedOperationException.class, items::clear);
     }
 }
 

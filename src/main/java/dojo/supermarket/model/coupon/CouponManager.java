@@ -15,12 +15,15 @@ import java.util.Map;
  * Manages coupon validation and discount calculation.
  * Implements Service pattern for coupon-related business logic.
  */
-public class CouponManager {
+public final class CouponManager {
 
+    /** Divisor for percentage calculations. */
     private static final BigDecimal PERCENTAGE_DIVISOR =
             new BigDecimal("100");
+    /** Scale for BigDecimal rounding operations. */
     private static final int SCALE = 2;
 
+    /** List of available coupons. */
     private final List<Coupon> availableCoupons = new ArrayList<>();
 
     /**

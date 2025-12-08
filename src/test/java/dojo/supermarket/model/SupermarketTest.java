@@ -38,5 +38,18 @@ class SupermarketTest {
         assertBigDecimalEquals(expectedTotal, receiptItem.totalPrice());
         assertBigDecimalEquals(bd(2.5), receiptItem.quantity());
     }
+
+    @Test
+    void offerGettersTest() {
+        Product toothbrush = new Product("toothbrush", ProductUnit.EACH);
+        Offer offer = new Offer(SpecialOfferType.THREE_FOR_TWO,
+                toothbrush, bd(0));
+
+        assertEquals(SpecialOfferType.THREE_FOR_TWO, offer.getOfferType());
+        assertEquals(toothbrush, offer.getProduct());
+        assertBigDecimalEquals(bd(0), offer.getArgument());
+        assertEquals("ThreeForTwoStrategy",
+		        offer.getStrategy().getClass().getSimpleName());
+    }
 }
 

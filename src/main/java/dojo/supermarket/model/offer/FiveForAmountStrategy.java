@@ -5,8 +5,10 @@ import dojo.supermarket.model.Product;
 
 import java.math.BigDecimal;
 
-public final class FiveForAmountStrategy implements DiscountStrategy {
+public final class FiveForAmountStrategy
+        extends AbstractWholeNumberDiscountStrategy {
 
+    /** Number of items required for the discount. */
     private static final int ITEMS_IN_SET = 5;
 
     @Override
@@ -14,33 +16,15 @@ public final class FiveForAmountStrategy implements DiscountStrategy {
                                        final BigDecimal quantity,
                                        final BigDecimal unitPrice,
                                        final BigDecimal argument) {
-        if (!isWholeNumber(quantity)) {
-            return null;
-        }
-
-        final int quantityAsInt = quantity.intValue();
-
-        if (quantityAsInt < ITEMS_IN_SET) {
-            return null;
-        }
-
-        final int numberOfSets = quantityAsInt / ITEMS_IN_SET;
-        final int remainder = quantityAsInt % ITEMS_IN_SET;
-
-        final BigDecimal totalWithDiscount = argument
-                .multiply(BigDecimal.valueOf(numberOfSets))
-                .add(unitPrice.multiply(BigDecimal.valueOf(remainder)));
-
-        final BigDecimal discountAmount = quantity.multiply(unitPrice)
-                .subtract(totalWithDiscount);
-
-        return new Discount(product,
+        return calculateSetBasedDiscount(
+                product,
+                quantity,
+                unitPrice,
+                ITEMS_IN_SET,
+                (sets, _) ->
+                        argument.multiply(BigDecimal.valueOf(sets)),
                 String.format("%d for %s", ITEMS_IN_SET,
-                        argument.toPlainString()),
-                discountAmount.negate());
-    }
-
-    private boolean isWholeNumber(final BigDecimal value) {
-        return value.stripTrailingZeros().scale() <= 0;
+                        argument.toPlainString())
+        );
     }
 }

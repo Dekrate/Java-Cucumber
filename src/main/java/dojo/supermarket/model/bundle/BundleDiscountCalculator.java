@@ -14,8 +14,14 @@ import java.util.Map;
  */
 public final class BundleDiscountCalculator {
 
+    /**
+     * Divisor for percentage calculations.
+     */
     private static final BigDecimal PERCENTAGE_DIVISOR =
             new BigDecimal("100");
+    /**
+     * Scale for BigDecimal rounding operations.
+     */
     private static final int SCALE = 2;
 
     /**

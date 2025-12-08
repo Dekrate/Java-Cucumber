@@ -13,16 +13,25 @@ import java.util.Objects;
  */
 public final class Coupon {
 
+    /** Maximum allowed discount percentage. */
     private static final BigDecimal MAX_DISCOUNT_PERCENTAGE =
             new BigDecimal("100.0");
 
+    /** The coupon code. */
     private final String code;
+    /** The product this coupon applies to. */
     private final Product product;
+    /** The required quantity to trigger the coupon. */
     private final int requiredQuantity;
+    /** The quantity that receives the discount. */
     private final int discountedQuantity;
+    /** The discount percentage. */
     private final BigDecimal discountPercentage;
+    /** The start date of validity. */
     private final LocalDate validFrom;
+    /** The end date of validity (inclusive). */
     private final LocalDate validUntil;
+    /** Whether the coupon has been redeemed. */
     private boolean redeemed;
 
     /**

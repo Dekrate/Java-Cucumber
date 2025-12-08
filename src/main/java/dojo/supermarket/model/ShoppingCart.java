@@ -12,7 +12,9 @@ import java.util.Map;
  */
 public final class ShoppingCart {
 
+    /** List of products with quantities in order of addition. */
     private final List<ProductQuantity> items = new ArrayList<>();
+    /** Map of products to their total quantities. */
     private final Map<Product, BigDecimal> productQuantities =
             new HashMap<>();
 
