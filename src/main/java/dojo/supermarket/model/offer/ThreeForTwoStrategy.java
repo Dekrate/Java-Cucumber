@@ -24,7 +24,8 @@ public final class ThreeForTwoStrategy
                 unitPrice,
                 ITEMS_TO_BUY,
                 (sets, price) ->
-                        price.multiply(BigDecimal.valueOf(sets * ITEMS_TO_PAY)),
+                        price.multiply(BigDecimal
+                                .valueOf((long) sets * ITEMS_TO_PAY)),
                 "3 for 2"
         );
     }

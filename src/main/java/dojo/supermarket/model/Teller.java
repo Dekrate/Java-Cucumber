@@ -27,23 +27,40 @@ public class Teller {
     /** List of available product bundles. */
     private final List<ProductBundle> bundles = new ArrayList<>();
     /** Calculator for bundle discounts. */
-    private final BundleDiscountCalculator bundleCalculator =
-            new BundleDiscountCalculator();
+    private final BundleDiscountCalculator bundleCalculator;
     /** Manager for coupon-based discounts. */
-    private final CouponManager couponManager = new CouponManager();
+    private final CouponManager couponManager;
     /** Manager for loyalty program operations. */
-    private final LoyaltyProgramManager loyaltyManager =
-            new LoyaltyProgramManager();
+    private final LoyaltyProgramManager loyaltyManager;
     /** The current purchase date for coupon validation. */
     private LocalDate purchaseDate = LocalDate.now();
 
     /**
-     * Creates a new Teller.
+     * Creates a new Teller with default managers.
      *
      * @param cat the supermarket catalog
      */
     public Teller(final SupermarketCatalog cat) {
+        this(cat, new BundleDiscountCalculator(), new CouponManager(),
+                new LoyaltyProgramManager());
+    }
+
+    /**
+     * Creates a new Teller with specific managers (Dependency Injection).
+     *
+     * @param cat        the supermarket catalog
+     * @param bundleCalc the bundle discount calculator
+     * @param couponMg   the coupon manager
+     * @param loyaltyMg  the loyalty program manager
+     */
+    public Teller(final SupermarketCatalog cat,
+                  final BundleDiscountCalculator bundleCalc,
+                  final CouponManager couponMg,
+                  final LoyaltyProgramManager loyaltyMg) {
         this.catalog = cat;
+        this.bundleCalculator = bundleCalc;
+        this.couponManager = couponMg;
+        this.loyaltyManager = loyaltyMg;
     }
 
     /**
@@ -131,7 +148,7 @@ public class Teller {
                         remainingQuantities, catalog, purchaseDate);
         couponDiscounts.forEach(receipt::addDiscount);
 
-        theCart.handleOffers(receipt, offers, catalog);
+        handleOffers(receipt, theCart);
 
         final BigDecimal totalBeforeLoyalty = receipt.getTotalPrice();
 
@@ -170,6 +187,32 @@ public class Teller {
      */
     public LoyaltyProgramManager getLoyaltyManager() {
         return loyaltyManager;
+    }
+
+    /**
+     * Handles offer application for products in cart.
+     *
+     * @param receipt the receipt to add discounts to
+     * @param cart    the shopping cart
+     */
+    private void handleOffers(final Receipt receipt,
+                              final ShoppingCart cart) {
+        for (Map.Entry<Product, BigDecimal> entry
+                : cart.productQuantities().entrySet()) {
+            final Product product = entry.getKey();
+            final BigDecimal quantity = entry.getValue();
+
+            if (offers.containsKey(product)) {
+                final Offer offer = offers.get(product);
+                final BigDecimal unitPrice = catalog.getUnitPrice(product);
+
+                final Discount discount =
+                        offer.calculateDiscount(quantity, unitPrice);
+                if (discount != null) {
+                    receipt.addDiscount(discount);
+                }
+            }
+        }
     }
 }
 

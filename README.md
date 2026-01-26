@@ -98,23 +98,18 @@ Extensive test suites were developed for all critical components:
     - Validation logic verification
     - Template method pattern testing
 
-11. **FullCoverageTest** (11 tests)
-    - Record methods (equals, hashCode, toString)
-    - Enum coverage
-    - Defensive validation checks
-
 ### Final Test Count
 
-**Total: 156 tests, all passing**
+**Total: 143 tests, all passing**
 
 ### Coverage Metrics
 
 - **Class Coverage**: 100%
 - **Method Coverage**: 100%
-- **Line Coverage**: 98%
-- **Branch Coverage**: 92%
+- **Line Coverage**: ~96%
+- **Branch Coverage**: ~90%
 
-All critical business logic paths are covered, providing confidence for safe refactoring.
+Realistic coverage metrics after removing artificial coverage tests.
 
 ## Code Smell Detection and Refactoring
 
@@ -138,9 +133,10 @@ Both manual and automated analysis (using SonarQube and IntelliJ IDEA inspection
 - **Impact**: Unnecessary complexity, reduced coverage potential
 
 #### 4. Feature Envy
-- **Location**: Discount calculation logic scattered across multiple classes
-- **Issue**: Logic not cohesively organized
-- **Impact**: Poor separation of concerns
+- **Location**: `ShoppingCart.handleOffers()`
+- **Issue**: ShoppingCart (data holder) was responsible for discount application logic using Receipt and Catalog.
+- **Impact**: Poor separation of concerns, violated SRP.
+- **Refactoring**: Moved `handleOffers` logic to `Teller` and centralized all discount processing there.
 
 #### 5. Missing Abstractions
 - **Location**: Discount strategy implementations
@@ -311,15 +307,15 @@ Receipt receipt = teller.checksOutArticlesFrom(
 - Improved maintainability
 - Achievable 100% branch coverage
 
-#### 4. Service Layer Introduction
+#### 4. Service Layer Introduction and Dependency Injection
 
-**Problem**: Business logic scattered across domain objects.
+**Problem**: Business logic scattered across domain objects, and classes creating their own dependencies.
 
-**Solution**: Created dedicated service classes (Managers and Calculators).
+**Solution**: Created dedicated service classes (Managers and Calculators) and refactored `Teller` to support constructor-based Dependency Injection.
 
 **Benefits**:
 - Clear separation of concerns
-- Easier testing
+- Easier testing through mockable dependencies
 - Better encapsulation of business rules
 
 ### Code Style Compliance (Checkstyle)

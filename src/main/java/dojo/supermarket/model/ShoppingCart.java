@@ -56,33 +56,5 @@ public final class ShoppingCart {
         items.add(new ProductQuantity(product, quantity));
         productQuantities.merge(product, quantity, BigDecimal::add);
     }
-
-    /**
-     * Handles offer application for products in cart.
-     *
-     * @param receipt the receipt to add discounts to
-     * @param offers  available offers
-     * @param catalog the catalog for price lookup
-     */
-    void handleOffers(final Receipt receipt,
-                      final Map<Product, Offer> offers,
-                      final SupermarketCatalog catalog) {
-        for (Map.Entry<Product, BigDecimal> entry
-                : productQuantities.entrySet()) {
-            final Product product = entry.getKey();
-            final BigDecimal quantity = entry.getValue();
-
-            if (offers.containsKey(product)) {
-                final Offer offer = offers.get(product);
-                final BigDecimal unitPrice = catalog.getUnitPrice(product);
-
-                final Discount discount =
-                        offer.calculateDiscount(quantity, unitPrice);
-                if (discount != null) {
-                    receipt.addDiscount(discount);
-                }
-            }
-        }
-    }
 }
 
